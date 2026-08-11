@@ -45,18 +45,30 @@ Stop hook. *(Even the leading design skill has no runnable gate.)*
 
 ## Install
 
+**One line — installs into every detected agent (no clone needed):**
 ```powershell
-# Windows (PowerShell) — from inside skills/fixmyvibe
-./install.ps1            # auto-detect Claude Code, Codex, Antigravity
-./install.ps1 -All       # force all three
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/AnasNafees1802/FixMyVibe/main/bootstrap.ps1 | iex
 ```
 ```bash
 # macOS / Linux
-cd skills/fixmyvibe && ./install.sh      # or: ALL=1 ./install.sh
+curl -fsSL https://raw.githubusercontent.com/AnasNafees1802/FixMyVibe/main/bootstrap.sh | bash
+```
+Force all three even if not yet detected:
+```powershell
+$env:FIXMYVIBE_ALL='1'; irm https://raw.githubusercontent.com/AnasNafees1802/FixMyVibe/main/bootstrap.ps1 | iex
+```
+```bash
+curl -fsSL https://raw.githubusercontent.com/AnasNafees1802/FixMyVibe/main/bootstrap.sh | ALL=1 bash
 ```
 
-It copies the skill into each agent and registers a **`/fixmyvibe`** slash command. Idempotent.
-Then open a fresh session and try `/fixmyvibe audit .` on one of your own repos.
+**Or from a clone:**
+```bash
+cd skills/fixmyvibe && ./install.ps1     # Windows   (./install.sh on macOS/Linux; -All / ALL=1 to force)
+```
+
+Either way it copies the skill into each agent and registers a **`/fixmyvibe`** slash command
+(idempotent). Then open a fresh session and try `/fixmyvibe audit .` on one of your own repos.
 
 | Agent | Skill → | `/fixmyvibe` via |
 |---|---|---|

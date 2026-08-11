@@ -3,7 +3,18 @@
 Keep the whole `fixmyvibe/` folder together (the references, adapters, and `bin/` must travel with
 `SKILL.md`).
 
-## One command — install into every agent + register `/fixmyvibe`
+## Zero-clone — one-line remote install
+Installs into every detected agent straight from GitHub:
+```powershell
+# Windows (PowerShell)  — add  $env:FIXMYVIBE_ALL='1';  before it to force all three
+irm https://raw.githubusercontent.com/AnasNafees1802/FixMyVibe/main/bootstrap.ps1 | iex
+```
+```bash
+# macOS / Linux  — prefix with  ALL=1  after the pipe to force all three
+curl -fsSL https://raw.githubusercontent.com/AnasNafees1802/FixMyVibe/main/bootstrap.sh | bash
+```
+
+## One command — from a clone
 From inside the `fixmyvibe/` folder, run the installer. It copies the skill into each agent it
 detects and registers a **`/fixmyvibe`** slash command in each. Idempotent — safe to re-run.
 
