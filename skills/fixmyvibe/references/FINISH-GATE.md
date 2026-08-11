@@ -71,5 +71,8 @@ secret scan diff     # Gate 2 (gitleaks/trufflehog complements the audit's high-
 a11y check on UI     # Gate 4 (axe/pa11y/Lighthouse); visual-regression via Playwright if available
 ```
 `bin/fixmyvibe-audit.*` returns non-zero on any BLOCKER — use it as a pre-commit or agent Stop hook.
-The human-judgment items (logo test, scope, scored critique, maintainer test) still require you to
-actually look — the script covers the greppable slice, not taste.
+The secret check matches credential key-names case-insensitively (catches `API_KEY = "…"`), and
+deliberately exempts obvious placeholders, env-var references, and test fixtures
+(`changeme`, `process.env.*`, `*-test`, `example`, …) so you never have to contort real test code to
+satisfy it. It is a heuristic greppable slice, not a parser: the human-judgment items (logo test,
+scope, scored critique, maintainer test) still require you to actually look.

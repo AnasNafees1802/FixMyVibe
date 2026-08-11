@@ -29,8 +29,10 @@ if (-not $files) { Write-Host 'No files to scan.'; exit 0 }
 
 function Scan([string]$Sev,[string]$Label,[string]$Re,[string]$Msg){
   foreach ($f in $files) {
+    # Skip docs, placeholders, env-refs, and test fixtures - not real secrets. (Select-String is case-insensitive.)
+    $excl = 'FORBIDDEN-PATTERNS|fixmyvibe-audit|allowlist|example|sample|dummy|mock|fixture|placeholder|changeme|redacted|your[_-]|process\.env|import\.meta|getenv|ENV\[|<[^>]+>|xxxx|test[_-]|[_-]test'
     $m = Select-String -Path $f -Pattern $Re -AllMatches 2>$null |
-         Where-Object { $_.Line -notmatch 'FORBIDDEN-PATTERNS|fixmyvibe-audit|example|allowlist' }
+         Where-Object { $_.Line -notmatch $excl }
     foreach ($hit in $m) {
       $line = if ($hit.Line) { $hit.Line.Trim() } else { '' }
       $loc = '{0}:{1}: {2}' -f $f, $hit.LineNumber, $line

@@ -26,9 +26,13 @@ else
 fi
 [[ ${#files[@]} -eq 0 ]] && { echo "No files to scan."; exit 0; }
 
-scan() { # scan LABEL SEVERITY REGEX MESSAGE
-  local sev="$1" label="$2" re="$3" msg="$4"
-  local out; out=$(grep -REnI "$re" "${files[@]}" 2>/dev/null | grep -viE 'FORBIDDEN-PATTERNS|fixmyvibe-audit|example|allowlist' )
+# Lines that look like docs, placeholders, env-refs, or test fixtures are not real secrets.
+EXCL='FORBIDDEN-PATTERNS|fixmyvibe-audit|allowlist|example|sample|dummy|mock|fixture|placeholder|changeme|redacted|your[_-]|process\.env|import\.meta|getenv|ENV\[|<[^>]+>|xxxx|test[_-]|[_-]test'
+
+scan() { # scan SEV LABEL REGEX MSG [ci]   (ci = case-insensitive match)
+  local sev="$1" label="$2" re="$3" msg="$4" ci=""
+  [[ "${5:-}" == "ci" ]] && ci="-i"
+  local out; out=$(grep -REnI $ci "$re" "${files[@]}" 2>/dev/null | grep -viE "$EXCL" )
   if [[ -n "$out" ]]; then
     while IFS= read -r line; do
       [[ "$sev" == block ]] && hit "$label" "$msg" "$line" || warn "$label" "$msg" "$line"
@@ -40,7 +44,7 @@ echo "== FixMyVibe audit (${#files[@]} files) =="
 
 # ---- §A security BLOCKERS ----
 scan block secrets   'sk-[A-Za-z0-9]{16,}|AKIA[0-9A-Z]{12,}|-----BEGIN (RSA|OPENSSH|PRIVATE)|xox[baprs]-[0-9A-Za-z-]{8,}' 'possible hardcoded secret/key'
-scan block secrets   '(password|passwd|secret|api[_-]?key|token)\s*[:=]\s*["'"'"'][^"'"'"']{6,}' 'hardcoded credential literal'
+scan block secrets   '(password|passwd|secret|api[_-]?key|token)\s*[:=]\s*["'"'"'][^"'"'"']{6,}' 'hardcoded credential literal' ci
 scan block secrets   '://[^/@:\s]+:[^/@\s]+@' 'credentials embedded in a URL'
 scan block injection '(query|execute|exec)[[:space:]]*\([[:space:]]*`[^`]*(SELECT|INSERT|UPDATE|DELETE|DROP)[^`]*\$\{' 'SQL built in a template literal (use parameters)'
 scan block injection '(query|execute|exec)[[:space:]]*\([[:space:]]*"[^"]*(SELECT|INSERT|UPDATE|DELETE|DROP)[^"]*"[[:space:]]*\+' 'concatenated SQL string (use parameters)'
