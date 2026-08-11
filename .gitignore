@@ -1,0 +1,23 @@
+# Continuum / Perpetua working ledger — local project memory, not for the repo
+.aicontext/
+
+# Engram local memory store
+.engram/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+*~
+.idea/
+.vscode/
+
+# Dependencies / build (in case examples are added later)
+node_modules/
+dist/
+build/
+.next/
+
+# Local scratch
+*.log
+tmp/

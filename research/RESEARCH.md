@@ -1,0 +1,338 @@
+# FixMyVibe — Research Synthesis
+
+*Deep dive into vibe-coding failure modes and generic AI UI/UX, and the landscape of existing
+fixes. This is the evidence base for the `fixmyvibe` skill. Compiled 2026-08-11.*
+
+---
+
+## 0. What "vibe coding" is (and why it fails predictably)
+
+**Vibe coding** = building software by prompting an AI agent in natural language and largely
+accepting whatever it produces, without reading, reviewing, or understanding the code. The term was
+popularized in early 2025 (Andrej Karpathy: "give in to the vibes… forget that the code even
+exists"). It's fantastic for speed and prototyping and genuinely dangerous in production, because the
+model optimizes for *"produces something that looks like it works on the happy path"* — not for
+security, maintainability, correctness under edge cases, or design taste.
+
+The failures are **predictable and systemic**, not random, because they come from *how* LLMs
+generate code:
+
+- **Statistical averaging** — the model outputs the most probable continuation. In code that's the
+  most common (often insecure) pattern; in UI that's the average of every template it trained on
+  ("distributional convergence"). ([shuffle.dev](https://shuffle.dev/blog/2026/01/why-do-most-ai-generated-websites-look-the-same/), [Medium/dminhk](https://medium.com/@dminhk/why-do-ai-generated-websites-all-look-identical-02a68015613d))
+- **"By definition, Copilot is an average of all developers' shared work… all the security failings
+  added to all known public codebases are part of the corpus."** ([Glide](https://www.glideapps.com/blog/vibe-coding-risks))
+- **Functionality over security** — models prioritize "make it run" and skip the checklist a human
+  would apply. ([Wiz](https://www.wiz.io/academy/ai-security/vibe-coding-security), [Checkmarx](https://checkmarx.com/blog/security-in-vibe-coding/))
+- **Vague prompts → safest default** — with no constraints the model picks the most statistically
+  common layout/stack. ([DEV](https://dev.to/_46ea277e677b888e0cd13/why-every-ai-generated-landing-page-looks-the-same-and-how-to-fix-it-1kmo))
+- **Uncritical acceptance** — teams assume output is production-ready, so vulnerabilities move
+  downstream with no validation. ([IBM](https://www.ibm.com/think/insights/vibe-coding-security-risks))
+
+---
+
+## A. Code-craft failure modes (the "vibe-coded mistakes")
+
+Each: what goes wrong → root cause → prevention. Citations inline.
+
+1. **Secrets hardcoded / exposed in the frontend.** API keys, DB creds committed to repos or shipped
+   in client bundles. *11% of vibe-coded apps were found leaking Supabase keys.* Root cause: model
+   inlines a working key to make the demo run; no concept of secret boundaries.
+   Prevent: env vars + server-only secrets; scan for high-entropy strings before commit.
+   ([HN](https://news.ycombinator.com/item?id=46662304), [vietanh.dev](https://www.vietanh.dev/blog/2026-03-12-securing-vibe-coded-apps))
+
+2. **Broken / missing authorization (BOLA/IDOR, no RLS).** Endpoints trust the client; row-level
+   security never enabled. *Lovable left a broken-auth flaw open 48 days; 303 vulnerable endpoints
+   across 170 of 1,645 scanned apps (~10%).* Root cause: auth is invisible on the happy path, so the
+   model omits it. Prevent: deny-by-default, server-side authz checks, enable RLS, test as a
+   different user. ([Medium/Somanath](https://medium.com/@somanathtv/the-lovable-supabase-stack-when-ai-driven-speed-becomes-your-biggest-liability-e94aad6f0102), [baytech](https://www.baytechconsulting.com/blog/vibe-coded-apps-exposed-what-it-means))
+
+3. **Injection (SQLi / XSS / command).** String-built queries, unescaped output. *A Swedish audit
+   found ~10.3% of live Lovable apps had exploitable SQLi/XSS.* Prevent: parameterized queries,
+   output encoding, an ORM/query builder, a template engine that auto-escapes.
+   ([vibe-eval](https://vibe-eval.com/ai-security/vibe-coding-vulnerabilities/))
+
+4. **Hallucinated dependencies → slopsquatting supply-chain attacks.** Models invent package names;
+   *19.7% of generated packages were hallucinated and 43% reappear on re-runs*, so attackers
+   pre-register them. (`huggingface-cli` decoy: 30k+ downloads.) Prevent: verify every dependency
+   exists and is the intended one before install; lockfiles; don't auto-install.
+   ([VibeDoctor](https://vibedoctor.io/blog/slopsquatting-ai-hallucinated-packages-malware))
+
+5. **No input validation / trusting the client.** Happy-path inputs only; no length/type/range
+   checks; client-side "validation" only. Prevent: validate + sanitize on the server at every trust
+   boundary. ([Contrast](https://www.contrastsecurity.com/glossary/vibe-coding))
+
+6. **No error handling / swallowed errors.** `try/except: pass`, unhandled promise rejections,
+   crashes on the first unexpected input. Root cause: errors don't appear on the demo path.
+   Prevent: handle and surface errors; fail loud in dev, gracefully in prod.
+
+7. **Insecure defaults & over-broad permissions.** Public buckets, `chmod 777`, CORS `*`, admin keys
+   in client, debug mode in prod. ([Databricks](https://www.databricks.com/blog/passing-security-vibe-check-dangers-vibe-coding))
+
+8. **Cryptographic failures.** Plaintext passwords, MD5/SHA1, homemade crypto, weak/no hashing.
+   Prevent: use a vetted library, bcrypt/argon2, TLS everywhere. ([arXiv 2606.23130](https://arxiv.org/pdf/2606.23130))
+
+9. **Arbitrary code execution / memory corruption even when it "appears functional."** The academic
+   (In)Security study found deployed vibe-coded apps with ACE and memory-corruption bugs behind a
+   working UI. ([arXiv 2606.23130](https://arxiv.org/pdf/2606.23130))
+
+10. **No tests (or fake/trivial tests).** Nothing proves it works or stays working; regressions ship
+    silently. Root cause: tests aren't needed to make the demo run. Prevent: tests for the behavior
+    just built + edge cases; run them.
+
+11. **Ignoring the repo's existing conventions.** New file invents its own style/stack/util instead
+    of matching neighbors; duplicates an existing helper. Root cause: the model reads little context
+    and pattern-matches to its training prior, not to *this* codebase.
+    Prevent: read before write; reuse existing utilities and patterns.
+
+12. **Silent scope creep / unrequested features.** Adds config, abstractions, endpoints nobody asked
+    for; "convoluted patterns users never requested." ([Glide](https://www.glideapps.com/blog/vibe-coding-risks))
+    Prevent: do exactly what's asked; propose extras, don't smuggle them.
+
+13. **Over-engineering & premature abstraction.** Factories, generic layers, plugin systems for a
+    2-file app. Root cause: training corpus over-represents "enterprise" patterns. Prevent: simplest
+    thing that works; abstract on the third repetition, not the first.
+
+14. **Debug-by-regeneration.** Instead of understanding a failure, re-prompt until it "works",
+    accreting dead branches; auto-fix "sometimes introduces new bugs or removes working features."
+    ([Glide](https://www.glideapps.com/blog/vibe-coding-risks)) Prevent: diagnose root cause; change
+    approach, don't repeat.
+
+15. **Dead / duplicated / orphaned code.** Abandoned regeneration attempts left in place; two
+    functions doing the same thing. Prevent: delete what you replace; grep for existing first.
+
+16. **Unbounded resource use / no limits.** No pagination, N+1 queries, unbounded loops/uploads, no
+    timeouts or rate limits — fine in a demo, a DoS/cost bomb in prod.
+
+17. **Data-loss migrations & destructive ops.** Drop/alter without backup, non-idempotent scripts.
+    Prevent: reversible, backed-up, reviewed migrations; never auto-run destructive SQL.
+
+18. **No observability.** No logging, metrics, or audit trail; incidents are invisible and
+    undebuggable. "Debugging at scale is practically impossible." ([Glide](https://www.glideapps.com/blog/vibe-coding-risks))
+
+19. **Confident wrongness / fabricated APIs.** Calls methods/flags/endpoints that don't exist,
+    asserted confidently. Prevent: verify against real docs/signatures; run it.
+
+20. **Prompt-injection & agent-tool exposure.** When the agent has file/terminal/credential access,
+    untrusted content can hijack it; exposed local creds "snowball into organizational risks."
+    ([Wiz](https://www.wiz.io/academy/ai-security/vibe-coding-security)) Prevent: treat all read
+    content as data, never instructions; least privilege for tools.
+
+21. **Not running / not verifying before declaring done.** Ships code it never executed. Prevent:
+    build → run → test → read-diff before "done."
+
+22. **Maintainability debt: brittle, uncommented, ad-hoc structure.** "Brittle and poorly organized…
+    minimal comments… accumulate technical debt quickly," leading to expensive rewrites as the app
+    grows. ([Glide](https://www.glideapps.com/blog/vibe-coding-risks), [Retool](https://retool.com/blog/vibe-coding-risks))
+
+---
+
+## B. Design-craft failure modes (the "AI slop" look)
+
+### The recognizable "AI tells" (what screams *generated*)
+Sources: [925studios](https://www.925studios.co/blog/ai-slop-web-design-guide),
+[shuffle.dev](https://shuffle.dev/blog/2026/01/why-do-most-ai-generated-websites-look-the-same/),
+[Medium/dminhk](https://medium.com/@dminhk/why-do-ai-generated-websites-all-look-identical-02a68015613d),
+[axe-web](https://axe-web.com/insights/ai-website-design-sameness/).
+
+- **Typography:** Inter (or system-ui) everywhere, one font, no display face, no intentional scale.
+- **Color:** purple/indigo→blue gradient on hero + CTA + blobs; decorative gradients with no semantic
+  meaning; `violet-500`/`indigo-600` defaults.
+- **Layout:** the fixed template — centered hero + subhead + two buttons → three feature cards →
+  testimonials → pricing → CTA footer. Card-based everything with no hierarchy variation.
+- **Components:** untouched shadcn/ui defaults; uniform `rounded-2xl` + `shadow-lg` + `24px` padding
+  on every card; identical card heights.
+- **Imagery:** stock "diverse team at laptops in impossibly lit office"; too-smooth AI illustrations;
+  unreplaced placeholders; glassmorphism + gradient blobs.
+- **Copy:** vague aspirational headlines ("Build the future of work", "Your all-in-one platform"),
+  superlatives ("best-in-class", "cutting-edge"), hedging ("may help you"), emoji bullets.
+- **Motion:** uniform fade-ins on everything, or none; buttons snap instead of ease; no
+  micro-interactions; decorative animation with no purpose.
+
+### UX failure modes (deeper than looks)
+- Missing **states**: no empty / loading / error / success / zero-results / offline states.
+- **Accessibility ignored**: poor contrast, no visible focus states, no keyboard nav, no `aria`,
+  non-semantic `<div>` soup, no labels, motion without `prefers-reduced-motion`.
+- **No real information architecture** or content hierarchy; everything same visual weight.
+- **Forms** with no validation feedback, no inline errors, no disabled/pending states.
+- **Not responsive-tested**; breaks on mobile; fixed pixel widths.
+- **Dark patterns** or meaningless motion that harms usability.
+- **Over-engineered UX**: "questionable taste… unnecessary complexity… prioritizes aesthetics over
+  functional UX." ([Glide](https://www.glideapps.com/blog/vibe-coding-risks))
+
+### What good looks like instead (principles)
+Sources: [925studios](https://www.925studios.co/blog/ai-slop-web-design-guide),
+[nayamoss](https://nayamoss.com/how-i-use-ai/teach-ai-agents-design-system).
+- **Design tokens first**: semantic CSS custom properties (`--color-action-primary`,
+  `--color-feedback-success`), never `--gradient-start`. Color applied by state/mode, not decoration.
+- **Two-font system**: a distinctive display face + a readable body face; an intentional modular type
+  scale. (Linear, Stripe, Vercel/Geist as references.)
+- **Real content**: product screenshots, real data, real team photos — not stock or lorem.
+- **Opinionated voice**: headlines a founder would actually say (Basecamp, Superhuman, Linear).
+- **Motion with 3 jobs only**: signal state change, direct attention, express brand — else delete it.
+- **Every state designed**: empty/loading/error/success/zero.
+- **Accessibility as a gate**: WCAG AA contrast, visible focus, keyboard path, semantic HTML, labels,
+  reduced-motion.
+- **A design system, derived per project** — build brand-specific tokens/components that *override*
+  the AI defaults, and review pages against it before shipping. (This is the anti-"average" move.)
+
+---
+
+## C. What every AI agent/tool is doing (cross-cutting patterns)
+
+- **Convergent default stack:** React + Tailwind + shadcn/ui + Supabase/Next is the near-universal
+  output of v0, Lovable, Bolt.new, Replit Agent — which is exactly why outputs look and fail alike.
+  ([Medium/Somanath](https://medium.com/@somanathtv/the-lovable-supabase-stack-when-ai-driven-speed-becomes-your-biggest-liability-e94aad6f0102))
+- **Shared behavioral failure modes** (all agents): don't-read-before-write; eager dependency adds;
+  don't-run/verify; happy-path only; ignore repo conventions; over-generate boilerplate; confident
+  wrongness; scope creep.
+- **How the ecosystem tries to constrain them:** rules files (`.cursor/rules/*.mdc`, `.cursorrules`),
+  **AGENTS.md** (build/test/style/architecture/boundaries context), **CLAUDE.md**, **skills**
+  (`SKILL.md`), plan mode, and verification loops. Best-practice guidance:
+  - Give the agent a **design philosophy + persona** ("experienced designer following Dieter Rams"),
+    not just rules — LLMs respond to persona. ([nayamoss](https://nayamoss.com/how-i-use-ai/teach-ai-agents-design-system))
+  - **Modular** rules over one mega-file; **read design rules before generating**.
+    ([DEV/Cursor](https://dev.to/mkomeyl94/from-prompt-to-production-mastering-rules-skills-and-subagents-in-cursor-47m4), [morphllm](https://www.morphllm.com/agents-md-guide), [builder.io](https://www.builder.io/blog/agents-md))
+  - Separate concerns: agent *behavior* vs project *code style*.
+    ([cursor-alternatives](https://cursor-alternatives.com/blog/system-prompts-for-ai-coding-agents/))
+
+---
+
+## D. Existing solutions — and where we beat them
+
+| Solution | What it does well | What it misses (our opening) |
+|---|---|---|
+| **Hallmark** (`nutlope/hallmark`) — SKILL.md, 4 verbs (Build/Audit/Redesign/Study), **65 slop gates**, 22 themes ([dev.to](https://dev.to/rams901/hallmark-stop-ai-generated-ui-slop-in-one-command-in-2026-3p9n)) | Best-in-class anti-slop UI gating; agent-agnostic SKILL.md; audit mode; pre-emit self-critique | **UI only** (no code security/correctness); **22 canned themes** can become the next monoculture; web/HTML-CSS only |
+| **awesome-cursorrules / .cursorrules collections** | Lots of stack-specific conventions | Vague ("write clean code"); no UI anti-slop; no enforcement/verification; not portable across agents |
+| **AGENTS.md templates** ([morphllm](https://www.morphllm.com/agents-md-guide), [builder.io](https://www.builder.io/blog/agents-md)) | Standard place for build/test/style context | Project-context, not a reusable craft standard; no anti-slop; no gate |
+| **"Design system for AI" guides** ([nayamoss](https://nayamoss.com/how-i-use-ai/teach-ai-agents-design-system)) | Persona + tokens + "read rules first" is exactly right | Manual, per-user, not packaged; UI only |
+| **Security guides** (Wiz/Checkmarx/IBM/vietanh) | Great checklists | Prose, not an agent-loadable enforceable skill |
+
+**Our differentiators (the reason `fixmyvibe` is better):**
+1. **Two axes in one skill** — code-craft *and* design-craft. Nobody else covers both.
+2. **Teach a method, don't ship themes** — derive a bespoke design system per project so output stays
+   distinctive instead of converging on "theme #7".
+3. **Enforcement, not exhortation** — a mandatory **Finish-Gate self-audit** that dogfoods a concrete
+   FORBIDDEN-PATTERNS blocklist; "done" is impossible on a red gate. Pairs with Perpetua's Stop guard.
+4. **Truly agent-agnostic packaging** — one folder, adapters for Claude Code, Cursor, Codex,
+   Antigravity, Gemini.
+5. **Persona + philosophy + concrete rules** — the combination the research says works best.
+
+---
+
+## D2. Deep competitor-repo teardown (the field we must beat)
+
+Studied the actual repositories, not just blog summaries. Findings:
+
+### Hallmark — `Nutlope/hallmark` (~12.3K★, MIT) — the one to beat
+The most sophisticated anti-slop design skill in existence. Mechanisms worth respecting:
+- **Macrostructure-first:** picks 1 of 21 named page shapes (Marquee Hero, Bento, Long Document,
+  Manifesto…) *before* visuals, and states the pick on the page (accountability).
+- **Diversification rule:** each build must differ from the last on ≥1 axis (paper-band / display
+  style / accent hue); reads `.hallmark/log.json` project memory to avoid repeating the last 3–5.
+- **Pre-emit self-critique:** scores output 1–5 on 6 axes (philosophy, hierarchy, execution,
+  specificity, restraint, variety); anything <3 triggers revision; scores stamped in a CSS comment.
+- **58-gate slop test** (genre-aware), extremely concrete: OKLCH tokens only, `minmax(0,1fr)` not
+  bare `1fr`, `:focus-visible` required, no italic headers, no fake browser/code chrome, no invented
+  metrics, `overflow-x: clip` not `hidden`, buttons wrap long words, responsive at 320/375/414/768.
+- **Surgical progressive loading:** loads only the genre + chosen macrostructure/component files,
+  never the whole catalogue; `slop-test.md` loaded only at the final gate.
+- **8 states per interactive element**, 3 named easings, `prefers-reduced-motion`, token file emitted.
+- **4 verbs:** default (build) · `audit` (score, no edits) · `redesign` (revisual inside boundaries)
+  · `study` (extract design DNA from a URL/screenshot into a portable `design.md`).
+- **Pre-flight scan:** reads the repo's existing font/palette/spacing/framework before asking anything.
+- **Weakness we exploit:** **design only.** Zero coverage of security, authz, injection, secrets,
+  tests, dependencies, data-loss migrations — i.e. the failures that actually get vibe-coded apps
+  breached. Also HTML/CSS-centric; not full-stack. *How we beat it: keep every good mechanism, then
+  generalize the self-critique, audit, diversification, pre-flight, and progressive-loading ideas to
+  CODE as well, and add executable enforcement it lacks.*
+  ([repo](https://github.com/nutlope/hallmark), [SKILL.md](https://github.com/Nutlope/hallmark/blob/main/skills/hallmark/SKILL.md), [explainx](https://www.explainx.ai/blog/nutlope-hallmark-anti-ai-slop-design-skill-july-2026))
+
+### `Koomook/claude-frontend-skills` — single `distinctive-frontend` skill
+Extreme font-weight contrast (100–200 vs 800–900), cultural aesthetic palettes
+(Cyberpunk/Brutalist/Vaporwave/Nordic), staggered load animations, layered/noise backgrounds; a
+tidy anti-pattern checklist (no Inter/Roboto, no 400–600 weights, no purple-blue gradient, no flat
+white bg, no pastel low-contrast). *Beat it: it's a single visual recipe with no code/security axis,
+no verify loop, no enforcement.* ([repo](https://github.com/Koomook/claude-frontend-skills))
+
+### `rohitg00/awesome-claude-design` — a reference collection
+Nine **aesthetic families** (Editorial Minimalism, Terminal-Core, Warm Editorial, Data-Dense Pro,
+Cinematic Dark, Playful Color, Glass/Soft-Futurism, Neon Brutalist, Cult/Indie) + catalogued
+"default fingerprints" to avoid (teal `#16d5e6`, animated live-dots, 4px card left-rules, 3-col hero
+grids, Lucide defaults, serif-headline+sans-body cliché). *Beat it: it's a curated list/prompt pack,
+not an enforceable skill; no code axis.* We borrow its aesthetic-family taxonomy as our
+DESIGN-DIRECTIONS menu. ([repo](https://github.com/rohitg00/awesome-claude-design))
+
+### `wilwaldon/Claude-Code-Frontend-Design-Toolkit` — a directory of tools
+Organizes 70+ tools into 10 categories (design skills, tokens, motion, UX intel, design-to-code,
+testing/Playwright visual regression, docs/context, framework skills, deploy, stacks). *Beat it:
+it's a shopping list that assumes you assemble it yourself; no single enforceable standard, no code
+security.* We take one idea: pair the skill with visual-regression/a11y tooling in the gate.
+([repo](https://github.com/wilwaldon/Claude-Code-Frontend-Design-Toolkit))
+
+### `PatrickJS/awesome-cursorrules` & the AGENTS.md standard
+Hundreds of stack-specific `.cursorrules`/MDC templates; in 2026 Google/OpenAI/Sourcegraph/Cursor/
+Factory converged on **AGENTS.md** as the universal agent-context file. *Beat it: these are
+project-context conventions, not a portable craft standard, and are vague ("write clean code") with
+no anti-slop and no gate.* We ride the AGENTS.md standard in our adapters.
+([awesome-cursorrules](https://github.com/PatrickJS/awesome-cursorrules), [AGENTS.md standard](https://www.morphllm.com/agents-md-guide))
+
+### The scoreboard — why `fixmyvibe` wins
+| Capability | Hallmark | Koomook | awesome-claude-design | cursorrules | **fixmyvibe** |
+|---|:--:|:--:|:--:|:--:|:--:|
+| Anti-slop design gates (concrete) | ✅✅ | ✅ | ✅(ref) | ❌ | ✅✅ |
+| Aesthetic-direction variety | ✅ | ✅ | ✅ | ❌ | ✅ |
+| Pre-emit scored self-critique | ✅ | ❌ | ❌ | ❌ | ✅ (code+design) |
+| Audit mode (score, no edits) | ✅ | ❌ | ❌ | ❌ | ✅ (code+design) |
+| **Code security/authz/injection** | ❌ | ❌ | ❌ | ~ | ✅✅ |
+| **Correctness/tests/deps/migrations** | ❌ | ❌ | ❌ | ~ | ✅✅ |
+| Full-stack (not just HTML/CSS) | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **Executable gate (CI/hook)** | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Agent-agnostic (# ecosystems) | 3 | 1 | 1–2 | 1 | **5** |
+| Verify-before-done loop | ~ | ❌ | ❌ | ❌ | ✅ |
+
+**Thesis:** Hallmark owns the *design* half brilliantly; we match its design rigor *and* add the
+entire *code-craft* half plus executable enforcement and broader agent reach — so a team can adopt
+**one** skill instead of a design skill + a security linter + a review checklist.
+
+## Sources
+- https://github.com/nutlope/hallmark
+- https://github.com/Nutlope/hallmark/blob/main/skills/hallmark/SKILL.md
+- https://www.explainx.ai/blog/nutlope-hallmark-anti-ai-slop-design-skill-july-2026
+- https://github.com/Koomook/claude-frontend-skills
+- https://github.com/rohitg00/awesome-claude-design
+- https://github.com/wilwaldon/Claude-Code-Frontend-Design-Toolkit
+- https://github.com/PatrickJS/awesome-cursorrules
+- https://github.com/sanjeed5/awesome-cursor-rules-mdc
+- https://github.com/DVC2/cursor_prompts
+- https://github.com/daymade/claude-code-skills
+- https://www.glideapps.com/blog/vibe-coding-risks
+- https://www.wiz.io/academy/ai-security/vibe-coding-security
+- https://checkmarx.com/blog/security-in-vibe-coding/
+- https://www.ibm.com/think/insights/vibe-coding-security-risks
+- https://arxiv.org/pdf/2606.23130  (Understanding the (In)Security of Vibe-Coded Applications)
+- https://www.guidepointsecurity.com/blog/vibe-coding-real-code-real-risks-or-both/
+- https://www.databricks.com/blog/passing-security-vibe-check-dangers-vibe-coding
+- https://retool.com/blog/vibe-coding-risks
+- https://www.contrastsecurity.com/glossary/vibe-coding
+- https://arxiv.org/pdf/2509.12491  (Good Vibrations? Qualitative study of vibe coding)
+- https://news.ycombinator.com/item?id=46662304  (11% of vibe-coded apps leaking Supabase keys)
+- https://www.vietanh.dev/blog/2026-03-12-securing-vibe-coded-apps
+- https://medium.com/@somanathtv/the-lovable-supabase-stack-when-ai-driven-speed-becomes-your-biggest-liability-e94aad6f0102
+- https://vibe-eval.com/ai-security/vibe-coding-vulnerabilities/
+- https://vibedoctor.io/blog/slopsquatting-ai-hallucinated-packages-malware
+- https://www.baytechconsulting.com/blog/vibe-coded-apps-exposed-what-it-means
+- https://vibe-eval.com/vibe-hacking/
+- https://www.clarista.io/blog/vibe-coding-security-limitations
+- https://labs.cloudsecurityalliance.org/research/csa-research-note-ai-codegen-vulnerability-debt-20260406-csa/
+- https://shuffle.dev/blog/2026/01/why-do-most-ai-generated-websites-look-the-same/
+- https://medium.com/@dminhk/why-do-ai-generated-websites-all-look-identical-02a68015613d
+- https://www.925studios.co/blog/ai-slop-web-design-guide
+- https://axe-web.com/insights/ai-website-design-sameness/
+- https://dev.to/_46ea277e677b888e0cd13/why-every-ai-generated-landing-page-looks-the-same-and-how-to-fix-it-1kmo
+- https://dev.to/rams901/hallmark-stop-ai-generated-ui-slop-in-one-command-in-2026-3p9n
+- https://nayamoss.com/how-i-use-ai/teach-ai-agents-design-system
+- https://www.morphllm.com/agents-md-guide
+- https://www.builder.io/blog/agents-md
+- https://cursor-alternatives.com/blog/system-prompts-for-ai-coding-agents/
+- https://dev.to/mkomeyl94/from-prompt-to-production-mastering-rules-skills-and-subagents-in-cursor-47m4
