@@ -1,14 +1,10 @@
 ---
 name: fixmyvibe
 description: >-
-  Stops any AI coding agent from shipping vibe-coded mistakes and generic "AI slop" UI/UX. Load this
-  whenever you are about to write, generate, scaffold, refactor, or review code OR build/style any
-  user interface, website, component, page, or design — especially from a vague prompt, a greenfield
-  app, a landing page, a dashboard, or "make it look good / modern / clean". Triggers on: build an
-  app/site/UI/component/feature, design/style a page, set up a project, "production-ready", code
-  review, security review, or any request where the agent would otherwise reach for React + Tailwind
-  + shadcn defaults, a purple gradient, hardcoded secrets, or happy-path-only code. Enforces a
-  read-before-write, verify-before-done craft loop with a hard anti-slop / anti-insecurity gate.
+  Review or guide software implementation to prevent insecure, unverified, and generic AI-generated
+  work. Use when building, changing, or reviewing code, UI, user-facing product copy, or AI-enabled
+  features where security, correctness, accessibility, design specificity, or proof-before-done
+  matters. Do not load for general explanations that do not inspect or change software artifacts.
 ---
 
 # FixMyVibe — the craft standard for AI coding agents
@@ -26,9 +22,12 @@ insecure, untested) pattern; in UI it's the average template (Inter + purple gra
 rounded cards). This skill exists to make you refuse the average and produce **crafted, secure,
 maintainable, distinctive** work — every time — and to **prove it before you claim you're done.**
 
-This skill governs **two axes**. Most tools only cover the second. You cover both:
+This skill governs **four axes**. Apply every axis touched by the request:
 - **Code-craft** — security, correctness, maintainability, honesty. → `references/CODE-CRAFT.md`
 - **Design-craft** — distinctive, accessible, state-complete UI. → `references/UI-CRAFT.md`
+- **Content-craft** — specific, factual, useful copy without generated filler. → `references/CONTENT-CRAFT.md`
+- **AI-system craft** — prompt-injection resistance, bounded agency, privacy, and evaluations.
+  → `references/AI-SYSTEMS.md`
 
 ---
 
@@ -52,6 +51,10 @@ This skill governs **two axes**. Most tools only cover the second. You cover bot
   the font stack, palette/design tokens, spacing scale, and motion library already in use.
 - If a design system already governs the project (a `design.md`, tokens file, or established
   component library), **conform to it** — do not stomp an established system. Preserve it.
+- Classify the change using `references/RISK-PROFILES.md`: select every applicable system profile
+  and choose routine / sensitive / critical. A small diff does not imply low risk.
+- For sensitive or critical work, list the assets, actors, entry points, trust boundaries, and top
+  credible abuse cases before implementation. Never use a scanner as a substitute for this model.
 
 **Step 1 — ORIENT (read before write).**
 - Restate the real request in one sentence. If genuinely ambiguous, ask one focused question; else
@@ -69,10 +72,15 @@ This skill governs **two axes**. Most tools only cover the second. You cover bot
   and your build must **diversify** — differ from any prior build in this project on ≥1 axis.
 - For every dependency you're about to add: confirm it **actually exists**, is the intended package
   (guard against hallucinated / slopsquatted names), and is really needed. Prefer the stdlib.
+- Choose verification evidence in advance from `references/SECURITY-VERIFICATION.md`. The plan must
+  test the changed behavior and its failure or abuse path, not merely run whatever suite already exists.
 
 **Step 3 — BUILD to the standard.**
 - Apply `references/CODE-CRAFT.md` (secrets, authz, injection, validation, errors, tests,
   observability) and `references/UI-CRAFT.md` (tokens, states, accessibility, motion, voice).
+- Apply `references/CONTENT-CRAFT.md` to prose shipped to users. Select write, edit, or detect mode;
+  preserve the author's voice during edits and never infer AI authorship from style. If the product
+  uses models, retrieval, embeddings, or agent tools, also apply `references/AI-SYSTEMS.md`.
 - Handle the unhappy paths *as you write them*, not later: errors, empty/loading/error states,
   invalid input, unauthorized access, zero results.
 - Keep the tree clean: delete what you replace; no dead/duplicated code left behind.
@@ -86,6 +94,8 @@ This skill governs **two axes**. Most tools only cover the second. You cover bot
   run the tests; run the executable gate `bin/fixmyvibe-audit.*` on the diff; self-audit against
   `references/FORBIDDEN-PATTERNS.md` (insecurity list + slop list); check accessibility and every
   UI state.
+- Treat audit exit code 2, skipped required evidence, or an unreviewed sensitive/critical boundary as
+  a red gate. “No heuristic findings” never means “secure.” State the exact checks and their limits.
 - **Any red item / any axis ≤3 / any blocklist hit → you are not done.** Fix it and re-run the gate.
   **Never report success on a red gate.** Only when everything is green do you report done — *with
   the evidence* (what you ran, what passed, and one line justifying each ⚠️ you kept).
@@ -100,20 +110,26 @@ This skill governs **two axes**. Most tools only cover the second. You cover bot
 
 ## Reference map (progressive disclosure — read only the one you need, when you need it)
 - **`references/CODE-CRAFT.md`** — the code standard: security, correctness, maintainability, honesty.
+- **`references/RISK-PROFILES.md`** — choose the risk tier and profile-specific checks for web/API,
+  mobile, desktop/CLI, libraries, infrastructure, data, embedded, and AI-enabled systems.
+- **`references/SECURITY-VERIFICATION.md`** — select layered evidence; triage and close findings.
 - **`references/UI-CRAFT.md`** — the design standard: derive a bespoke design system, every state, a11y.
+- **`references/CONTENT-CRAFT.md`** — factual, product-specific copy and an anti-filler review gate.
+- **`references/AI-SYSTEMS.md`** — security, privacy, bounded agency, and evaluation for model features.
 - **`references/DESIGN-DIRECTIONS.md`** — pick a deliberate aesthetic direction + macrostructure,
-  the diversification rule, and the concrete design gates (tokens, `minmax(0,1fr)`, `:focus-visible`,
-  8 states, no italic headers / fake chrome / invented metrics).
-- **`references/SELF-CRITIQUE.md`** — the scored pre-emit rubric (code + design) and **audit mode**.
-- **`references/FORBIDDEN-PATTERNS.md`** — the hard blocklist the gate checks against.
+  the diversification rule, and concrete gates for tokens, overflow, focus, states, and honest proof.
+- **`references/SELF-CRITIQUE.md`** — the scored pre-emit rubric and **audit mode**.
+- **`references/FORBIDDEN-PATTERNS.md`** — confirmed blockers plus contextual review signals.
 - **`references/FINISH-GATE.md`** — the mandatory verify-before-done self-audit checklist.
-- **`bin/fixmyvibe-audit.{sh,ps1}`** — executable gate: greps a diff for the security + slop
-  blocklist and exits non-zero. Wire into CI / a pre-commit / an agent Stop hook.
+- **`bin/fixmyvibe-audit.{sh,ps1}`** — executable heuristic gate with staged added-line scanning,
+  stable rule IDs, strict mode, and fail-closed errors. Wire into CI or a pre-commit hook.
 - **`adapters/`** — how to wire this into Claude Code, Cursor, Codex, Antigravity, Gemini.
 - **`INSTALL.md`** / **`README.md`** — one-drop install and what this is.
 
-Load `CODE-CRAFT.md` for any code task; add `UI-CRAFT.md` + `DESIGN-DIRECTIONS.md` when UI is
-involved; load `FORBIDDEN-PATTERNS.md` + `SELF-CRITIQUE.md` at the gate. Don't pre-load everything.
+Load `CODE-CRAFT.md` + `RISK-PROFILES.md` for any code task; add `SECURITY-VERIFICATION.md` for
+sensitive/critical work, `UI-CRAFT.md` + `DESIGN-DIRECTIONS.md` when UI is involved,
+`CONTENT-CRAFT.md` when prose ships, and `AI-SYSTEMS.md` for model-backed features. Load
+`FORBIDDEN-PATTERNS.md` + `SELF-CRITIQUE.md` at the gate. Don't pre-load everything.
 
 ## How this composes with Perpetua
 If a Perpetua mission is armed, FixMyVibe **is** the definition of "done well": the Finish Gate here

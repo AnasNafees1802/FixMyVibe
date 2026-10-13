@@ -2,115 +2,184 @@
 
 # FixMyVibe
 
-**Stop shipping vibe-coded slop.**
+**AI can ship a polished demo and the vulnerability behind it.**
 
-One agent skill that makes Claude Code, Codex, and Antigravity write **secure, maintainable code**
-and **distinctive, accessible UI** — and *prove* it before saying "done."
+FixMyVibe is an open source skill that makes coding agents inspect the project, reject generic
+defaults, test the risky paths, and show evidence before they call the work done.
 
-`/fixmyvibe` · MIT licensed · works across 5 agents
+`/fixmyvibe` | MIT licensed | Claude Code, Codex, Cursor, Antigravity, and Gemini
 
 </div>
 
----
+## The problem it solves
 
-## The problem
+AI-generated software tends to fail in four places at once:
 
-Vibe coding (prompting an agent and shipping whatever it produces) fails in **predictable** ways,
-because a model emits the *most probable* output — the average of its training data:
+| Surface | Common failure |
+|---|---|
+| Code | Missing authorization, unsafe data flow, invented dependencies, swallowed errors, and happy-path-only behavior |
+| Interface | Template-shaped layouts, inaccessible controls, missing states, and unexamined component defaults |
+| Content | Empty hype, fabricated proof, repetitive phrasing, and copy that could belong to any product |
+| AI systems | Prompt injection, unsafe model output, excessive tool authority, privacy leaks, and demos mistaken for evaluations |
 
-- In **code**, that average is the most common, often insecure pattern: hardcoded secrets, missing
-  authorization, string-built SQL, hallucinated dependencies, no tests, happy-path-only.
-  *(Real data: ~10% of scanned Lovable apps had exploitable SQLi/XSS; 11% leaked Supabase keys;
-  19.7% of AI-suggested packages are hallucinated.)*
-- In **UI**, that average is the same template every time: Inter + a purple→blue gradient +
-  identical rounded cards, no empty/loading/error states, failing accessibility.
+FixMyVibe turns those failure modes into a repeatable workflow and a release gate. It combines
+engineering judgment, product craft, risk profiles, and runnable repository checks in one portable
+skill.
 
-Existing tools fix only the second half. **FixMyVibe fixes both — and makes the gate runnable.**
+> **Read before you write. Refuse the average. Verify before you claim done.**
 
-## What it does
+## Try it in 60 seconds
 
-FixMyVibe loads a **craft standard** into your agent and enforces one contract:
+Review the installer before running remote code, then install the skill:
 
-> **Read before you write · Refuse the average · Verify before you claim done.**
-
-Three modes:
-- **`/fixmyvibe <task>`** — build to the standard (pre-flight scan → deliberate design direction →
-  code + UI craft → gate).
-- **`/fixmyvibe audit <path>`** — score existing code/UI, return a ranked punch list (no edits).
-- **`/fixmyvibe review`** — run the gate on your current diff.
-
-It ships an **executable gate** — `bin/fixmyvibe-audit.{sh,ps1}` — that greps a diff for the
-security + slop blocklist and **exits non-zero**. Wire it into CI, a pre-commit hook, or an agent
-Stop hook. *(Even the leading design skill has no runnable gate.)*
-
-## Install
-
-**One line — installs into every detected agent (no clone needed):**
 ```powershell
-# Windows (PowerShell)
+# Windows
 irm https://raw.githubusercontent.com/AnasNafees1802/FixMyVibe/main/bootstrap.ps1 | iex
 ```
+
 ```bash
-# macOS / Linux
+# macOS or Linux
 curl -fsSL https://raw.githubusercontent.com/AnasNafees1802/FixMyVibe/main/bootstrap.sh | bash
 ```
-Force all three even if not yet detected:
+
+Open a fresh agent session and run:
+
+```text
+/fixmyvibe audit .
+```
+
+To install from a clone instead, see
+[`skills/fixmyvibe/INSTALL.md`](skills/fixmyvibe/INSTALL.md).
+
+## One skill, four gates
+
+FixMyVibe first reads the repository and selects the rules that match the work. A UI change loads
+the design and accessibility standards. An API change loads the relevant security profile. A
+model-backed feature adds prompt-injection, privacy, tool-safety, and evaluation checks.
+
+The operating loop is deliberately small:
+
+1. **Inspect:** find the stack, conventions, design system, trust boundaries, and existing tools.
+2. **Decide:** classify risk, reject generic defaults, and choose the evidence required to finish.
+3. **Build:** handle failure states, authorization, accessibility, content, and AI-specific risks as applicable.
+4. **Verify:** run tests, stack-native checks, the FixMyVibe audit, and a scored self-review.
+5. **Report:** state what passed, what was not checked, and why any warning remains.
+
+## Modes
+
+```text
+/fixmyvibe <task>        Build or change software using the full workflow
+/fixmyvibe audit <path>  Diagnose existing work and return a ranked punch list without editing
+/fixmyvibe review        Apply the finish gate to the current diff
+```
+
+The content standard also distinguishes writing, editing, and detection. Detection identifies the
+specific pattern and location without guessing whether AI wrote it. Editing preserves the author's
+voice and makes the smallest change that fixes the problem.
+
+## How it compares
+
+The neighboring projects are useful specialists. FixMyVibe is designed for the broader software
+delivery boundary.
+
+| Capability | [no-ai-slop](https://github.com/petergyang/no-ai-slop) | [Anti-AI-UI](https://github.com/Vanszs/Anti-AI-UI) | FixMyVibe |
+|---|:---:|:---:|:---:|
+| Detect and edit generic prose | Strong focus | Partial | Included |
+| UI anti-pattern guidance | No | Strong focus | Included |
+| Positive UI decision method | No | Component and style references | Project-derived design system |
+| Code security and correctness | No | Pattern catalog | Risk-profiled gate |
+| AI feature security and evaluations | No | No | Included |
+| Web, API, mobile, CLI, library, infrastructure, data, and IoT profiles | No | No | Included |
+| Cross-platform repository audit | No | No | PowerShell and shell |
+| Explicit evidence-before-done contract | Writing evaluation | UI review workflow | Full delivery workflow |
+
+This is a scope comparison based on the public repositories reviewed on 13 October 2026, not a
+claim that one tool replaces every specialist. FixMyVibe adopts their strongest ideas, including
+voice-preserving edits, detection without fake authorship claims, detailed component review, and
+positive references. It avoids turning a fixed palette, font list, or template catalog into the
+next default.
+
+The full evidence and competitor notes are in
+[`research/RESEARCH.md`](research/RESEARCH.md).
+
+## The executable audit
+
+The repository includes equivalent PowerShell and shell gates with stable rule IDs, staged
+added-line scanning, strict-warning mode, visible suppressions, and machine-readable JSON on
+PowerShell.
+
 ```powershell
-$env:FIXMYVIBE_ALL='1'; irm https://raw.githubusercontent.com/AnasNafees1802/FixMyVibe/main/bootstrap.ps1 | iex
+pwsh skills/fixmyvibe/bin/fixmyvibe-audit.ps1 -Staged
+pwsh skills/fixmyvibe/bin/fixmyvibe-audit.ps1 -StrictWarnings -Format Json src
+pwsh -NoProfile -File tests/audit.tests.ps1
 ```
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/AnasNafees1802/FixMyVibe/main/bootstrap.sh | ALL=1 bash
+bash skills/fixmyvibe/bin/fixmyvibe-audit.sh --staged
+bash skills/fixmyvibe/bin/fixmyvibe-audit.sh --strict-warnings src
+bash tests/audit.tests.sh
 ```
 
-**Or from a clone:**
-```bash
-cd skills/fixmyvibe && ./install.ps1     # Windows   (./install.sh on macOS/Linux; -All / ALL=1 to force)
+| Exit code | Meaning |
+|---:|---|
+| `0` | No blockers under the selected mode |
+| `1` | A blocking rule matched, or strict warnings remain |
+| `2` | The scan could not complete |
+
+A clean heuristic scan does **not** prove that software is secure, correct, accessible, or
+well-designed. The skill requires stack-native tests, security tools, manual flow checks, and human
+review in proportion to risk. A reviewed false positive can use a narrow suppression such as
+`fixmyvibe: allow SEC201 trusted-sanitized-renderer`; the rule ID and reason are required, and the
+suppression remains visible in the report.
+
+## What ships
+
+```text
+skills/fixmyvibe/
+|-- SKILL.md                     Entry point and operating loop
+|-- INSTALL.md                   Installation and update guide
+|-- command.md                   Slash-command template
+|-- install.ps1 / install.sh     Cross-agent installers
+|-- adapters/                    Agent-specific integration files
+|-- bin/
+|   |-- fixmyvibe-audit.ps1      PowerShell audit
+|   `-- fixmyvibe-audit.sh       Shell audit
+`-- references/
+    |-- CODE-CRAFT.md            Security, correctness, maintainability, and honesty
+    |-- RISK-PROFILES.md         Risk tiers and system-specific profiles
+    |-- SECURITY-VERIFICATION.md Layered evidence and finding discipline
+    |-- UI-CRAFT.md              Design method, component states, and accessibility
+    |-- CONTENT-CRAFT.md         Write, edit, and detect modes for shipped prose
+    |-- AI-SYSTEMS.md            Model, retrieval, data, tool, and evaluation safety
+    |-- DESIGN-DIRECTIONS.md     Context-driven visual and structural decisions
+    |-- SELF-CRITIQUE.md         Scored review rubric
+    |-- FORBIDDEN-PATTERNS.md    Blocking failures and contextual review signals
+    `-- FINISH-GATE.md           Evidence required before completion
+
+tests/                           PowerShell and shell regression suites
+research/RESEARCH.md             Standards baseline and competitor teardown
 ```
 
-Either way it copies the skill into each agent and registers a **`/fixmyvibe`** slash command
-(idempotent). Then open a fresh session and try `/fixmyvibe audit .` on one of your own repos.
+## Supported agents
 
-| Agent | Skill → | `/fixmyvibe` via |
+| Agent | Skill location | Command integration |
 |---|---|---|
 | Claude Code | `~/.claude/skills/fixmyvibe/` | `~/.claude/commands/fixmyvibe.md` |
 | Codex | `~/.codex/skills/fixmyvibe/` | `~/.codex/prompts/fixmyvibe.md` |
 | Antigravity | `~/.gemini/skills/fixmyvibe/` | `~/.gemini/workflows/fixmyvibe.md` |
+| Cursor | Manual skill or rules integration | See the install guide |
+| Gemini | Manual skill integration | See the install guide |
 
-Cursor and Gemini are supported manually — see [`skills/fixmyvibe/INSTALL.md`](skills/fixmyvibe/INSTALL.md).
+To force installation for the three auto-detected agents:
 
-## How it beats the field
-
-| Capability | Hallmark | Koomook | awesome-claude-design | **FixMyVibe** |
-|---|:--:|:--:|:--:|:--:|
-| Concrete anti-slop design gates | ✅✅ | ✅ | ✅(ref) | ✅✅ |
-| Scored self-critique / audit mode | ✅ | ❌ | ❌ | ✅ (code+design) |
-| **Security / correctness / deps** | ❌ | ❌ | ❌ | ✅✅ |
-| Full-stack (not just HTML/CSS) | ❌ | ❌ | ❌ | ✅ |
-| **Executable CI/hook gate** | ❌ | ❌ | ❌ | ✅ |
-| Agent ecosystems | 3 | 1 | 1–2 | **5** |
-
-Adopt **one** skill instead of a design skill + a security linter + a review checklist.
-Full teardown and citations: [`research/RESEARCH.md`](research/RESEARCH.md).
-
-## What's inside
-
+```powershell
+$env:FIXMYVIBE_ALL='1'; irm https://raw.githubusercontent.com/AnasNafees1802/FixMyVibe/main/bootstrap.ps1 | iex
 ```
-skills/fixmyvibe/
-├── SKILL.md                     # entry: persona + laws + build/audit/review + loop
-├── install.ps1 / install.sh     # cross-agent installer, registers /fixmyvibe
-├── command.md                   # the /fixmyvibe slash-command template
-├── references/
-│   ├── CODE-CRAFT.md            # security, correctness, maintainability, honesty
-│   ├── UI-CRAFT.md              # bespoke design system, every state, a11y
-│   ├── DESIGN-DIRECTIONS.md     # aesthetic direction + macrostructure + concrete gates
-│   ├── SELF-CRITIQUE.md         # scored pre-emit rubric (code+design) + audit mode
-│   ├── FORBIDDEN-PATTERNS.md    # the hard blocklist the gate checks
-│   └── FINISH-GATE.md           # verify-before-done self-audit
-├── bin/fixmyvibe-audit.sh/.ps1  # executable gate: grep the diff, exit non-zero
-└── adapters/                    # claude-code · cursor · codex · antigravity · gemini
-research/RESEARCH.md             # evidence base + competitor teardown (30+ sources)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/AnasNafees1802/FixMyVibe/main/bootstrap.sh | ALL=1 bash
 ```
 
 ## License
 
-MIT © 2026 Anas Nafees. See [LICENSE](LICENSE).
+MIT Copyright 2026 Anas Nafees. See [LICENSE](LICENSE).

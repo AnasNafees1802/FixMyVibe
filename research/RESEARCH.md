@@ -3,6 +3,54 @@
 *Deep dive into vibe-coding failure modes and generic AI UI/UX, and the landscape of existing
 fixes. This is the evidence base for the `fixmyvibe` skill. Compiled 2026-08-11.*
 
+## Standards baseline update (2026-10-13)
+
+The original research identified useful failure patterns but leaned too heavily on vendor articles,
+aggregate claims, and web UI. The current skill architecture now starts from primary standards and
+uses secondary research only as supporting context.
+
+### What changed in the skill
+
+1. **Risk profiles instead of one universal checklist.** Web/API work maps to OWASP ASVS 5.0 and the
+   API Security Top 10; mobile maps to MASVS/MASTG; IoT maps to ISVS; software components map to
+   SCVS and OpenSSF guidance. Desktop/CLI, library, infrastructure, and data-pipeline profiles cover
+   trust boundaries those web-focused sources miss.
+2. **A layered evidence model.** NIST SSDF calls for security practices across the development
+   lifecycle, including code review, automated analysis, dynamic testing, regression tests, root
+   cause analysis, and risk-based testing. A regex audit is now described honestly as one heuristic
+   layer, not a security verdict.
+3. **AI systems are a separate attack surface.** NIST AI 600-1 and current OWASP GenAI guidance
+   require attention to prompt injection, data privacy, model/tool supply chains, unsafe output,
+   excessive agency, evaluation, monitoring, and incident response. The skill now treats every model
+   and retrieval result as untrusted data and keeps authorization outside the model.
+4. **Accessibility targets WCAG 2.2 Level AA.** The UI gate now includes focus not obscured, zoom and
+   reflow, target size, error identification, accessible authentication, keyboard traversal, and a
+   screen-reader spot check. Automated accessibility scans remain a floor, not a conformance claim.
+5. **Supply-chain posture is explicit.** Dependency review now covers ownership, provenance, release
+   artifacts, CI token permissions, pinned build inputs, lockfiles, and SBOMs where supported. OpenSSF
+   itself describes Scorecard output as heuristic evidence, not a verdict, which informed the audit's
+   output language and `secure: null` JSON field.
+
+### Primary baselines
+
+- OWASP ASVS 5.0: https://owasp.org/projects/asvs
+- OWASP API Security Top 10: https://api-security.owasp.org/editions/2023/en/0x03-introduction/
+- OWASP MASVS and MASTG: https://mas.owasp.org/MASVS/
+- OWASP Software Component Verification Standard: https://owasp.org/projects/software-component-verification-standard
+- OWASP Internet of Things Security Verification Standard: https://owasp.org/projects/iot-security-verification-standard
+- NIST SP 800-218 Secure Software Development Framework: https://csrc.nist.gov/pubs/sp/800/218/final
+- NIST AI 600-1 Generative AI Profile: https://www.nist.gov/itl/ai-risk-management-framework/ai-risk-management-framework-resources
+- W3C WCAG 2.2: https://www.w3.org/TR/WCAG22/
+- OpenSSF Scorecard: https://github.com/ossf/scorecard
+
+### Research discipline
+
+- Do not repeat a percentage without the underlying study, sample, date, and method.
+- Do not treat a top-ten awareness list as a complete risk assessment.
+- Do not claim compliance from a scanner. Conformance needs the controls and evidence required by
+  the named standard.
+- Re-check versions of primary standards for sensitive and critical releases.
+
 ---
 
 ## 0. What "vibe coding" is (and why it fails predictably)
@@ -62,7 +110,7 @@ Each: what goes wrong → root cause → prevention. Citations inline.
    checks; client-side "validation" only. Prevent: validate + sanitize on the server at every trust
    boundary. ([Contrast](https://www.contrastsecurity.com/glossary/vibe-coding))
 
-6. **No error handling / swallowed errors.** `try/except: pass`, unhandled promise rejections,
+6. **No error handling / swallowed errors.** `try/except: pass`, unhandled promise rejections, <!-- fixmyvibe: allow COR001 documented-pattern -->
    crashes on the first unexpected input. Root cause: errors don't appear on the demo path.
    Prevent: handle and surface errors; fail loud in dev, gracefully in prod.
 
@@ -198,18 +246,20 @@ Sources: [925studios](https://www.925studios.co/blog/ai-slop-web-design-guide),
 
 ---
 
-## D. Existing solutions — and where we beat them
+## D. Existing solutions and the gap FixMyVibe addresses
 
 | Solution | What it does well | What it misses (our opening) |
 |---|---|---|
-| **Hallmark** (`nutlope/hallmark`) — SKILL.md, 4 verbs (Build/Audit/Redesign/Study), **65 slop gates**, 22 themes ([dev.to](https://dev.to/rams901/hallmark-stop-ai-generated-ui-slop-in-one-command-in-2026-3p9n)) | Best-in-class anti-slop UI gating; agent-agnostic SKILL.md; audit mode; pre-emit self-critique | **UI only** (no code security/correctness); **22 canned themes** can become the next monoculture; web/HTML-CSS only |
+| **no-ai-slop** (`petergyang/no-ai-slop`) | Sharp write/edit/detect workflow; preserves voice; reports changes; does not pretend style can prove AI authorship | Prose only; no code, UI, security, accessibility, or AI-system release gate |
+| **Anti-AI-UI** (`Vanszs/Anti-AI-UI`) | Extensive UI and code pattern catalogs; component references; accessibility checks; searchable design data | UI-centric and highly prescriptive; long fixed menus and absolute bans can create another monoculture; no full delivery security model |
+| **Hallmark** (`nutlope/hallmark`) | Detailed anti-slop UI gates; agent-agnostic skill; audit mode; pre-emit self-critique | UI only; theme catalogs can become another monoculture; web/HTML-CSS focused |
 | **awesome-cursorrules / .cursorrules collections** | Lots of stack-specific conventions | Vague ("write clean code"); no UI anti-slop; no enforcement/verification; not portable across agents |
 | **AGENTS.md templates** ([morphllm](https://www.morphllm.com/agents-md-guide), [builder.io](https://www.builder.io/blog/agents-md)) | Standard place for build/test/style context | Project-context, not a reusable craft standard; no anti-slop; no gate |
 | **"Design system for AI" guides** ([nayamoss](https://nayamoss.com/how-i-use-ai/teach-ai-agents-design-system)) | Persona + tokens + "read rules first" is exactly right | Manual, per-user, not packaged; UI only |
 | **Security guides** (Wiz/Checkmarx/IBM/vietanh) | Great checklists | Prose, not an agent-loadable enforceable skill |
 
-**Our differentiators (the reason `fixmyvibe` is better):**
-1. **Two axes in one skill** — code-craft *and* design-craft. Nobody else covers both.
+**FixMyVibe's differentiators:**
+1. **Four axes in one skill** — code, design, content, and AI-system craft, selected by risk profile.
 2. **Teach a method, don't ship themes** — derive a bespoke design system per project so output stays
    distinctive instead of converging on "theme #7".
 3. **Enforcement, not exhortation** — a mandatory **Finish-Gate self-audit** that dogfoods a concrete
@@ -220,12 +270,44 @@ Sources: [925studios](https://www.925studios.co/blog/ai-slop-web-design-guide),
 
 ---
 
-## D2. Deep competitor-repo teardown (the field we must beat)
+## D2. Deep competitor-repo teardown
 
 Studied the actual repositories, not just blog summaries. Findings:
 
-### Hallmark — `Nutlope/hallmark` (~12.3K★, MIT) — the one to beat
-The most sophisticated anti-slop design skill in existence. Mechanisms worth respecting:
+### `petergyang/no-ai-slop`
+
+This is the strongest writing-specific workflow reviewed. It separates editing from detection,
+preserves personal voice, asks for the minimum effective edit, returns a concise change report, and
+explicitly refuses to infer AI authorship from prose patterns. Its pattern catalog catches more than
+generic buzzwords: binary contrasts, throat-clearing, fake revelations, importance inflation,
+weasel attribution, synonym cycling, robotic rhythm, and conclusions that merely recap.
+
+FixMyVibe adopts the operating principles, not the wording: write/edit/detect are distinct
+operations; detect mode points to exact text without rewriting; edit mode preserves voice and
+reports material changes; factual claims still require source checks. The remaining difference is
+scope. `no-ai-slop` intentionally focuses on prose, while FixMyVibe applies content review inside a
+larger code, UI, security, and AI-system delivery gate.
+([repo](https://github.com/petergyang/no-ai-slop),
+[skill](https://github.com/petergyang/no-ai-slop/blob/main/skills/no-ai-slop/SKILL.md),
+[evaluation](https://github.com/petergyang/no-ai-slop/blob/main/skills/no-ai-slop/eval.md))
+
+### `Vanszs/Anti-AI-UI`
+
+This repository combines three useful layers: a detailed anti-pattern filter, positive component
+references, and a searchable UI/UX design database. Its strongest contribution is coverage depth.
+It reviews specific surfaces such as navigation, forms, tables, dialogs, feedback, accessibility,
+and common generated-code mistakes instead of stopping at colors and gradients.
+
+Its main tradeoff is prescriptiveness. Large style menus, fixed font and palette recommendations,
+and absolute visual bans can replace one default with another. FixMyVibe therefore adopts
+component-level coverage and positive alternatives while treating individual visual traits as
+contextual signals. A combined fingerprint of unexplained defaults is stronger evidence than one
+font, color, library, or layout choice. The project also extends beyond UI into authorization,
+injection, dependency provenance, data loss, AI tool boundaries, and release evidence.
+([repo](https://github.com/Vanszs/Anti-AI-UI))
+
+### Hallmark — `Nutlope/hallmark`
+A detailed anti-slop design skill with mechanisms worth respecting:
 - **Macrostructure-first:** picks 1 of 21 named page shapes (Marquee Hero, Bento, Long Document,
   Manifesto…) *before* visuals, and states the pick on the page (accountability).
 - **Diversification rule:** each build must differ from the last on ≥1 axis (paper-band / display
@@ -277,25 +359,28 @@ project-context conventions, not a portable craft standard, and are vague ("writ
 no anti-slop and no gate.* We ride the AGENTS.md standard in our adapters.
 ([awesome-cursorrules](https://github.com/PatrickJS/awesome-cursorrules), [AGENTS.md standard](https://www.morphllm.com/agents-md-guide))
 
-### The scoreboard — why `fixmyvibe` wins
-| Capability | Hallmark | Koomook | awesome-claude-design | cursorrules | **fixmyvibe** |
-|---|:--:|:--:|:--:|:--:|:--:|
-| Anti-slop design gates (concrete) | ✅✅ | ✅ | ✅(ref) | ❌ | ✅✅ |
-| Aesthetic-direction variety | ✅ | ✅ | ✅ | ❌ | ✅ |
-| Pre-emit scored self-critique | ✅ | ❌ | ❌ | ❌ | ✅ (code+design) |
-| Audit mode (score, no edits) | ✅ | ❌ | ❌ | ❌ | ✅ (code+design) |
-| **Code security/authz/injection** | ❌ | ❌ | ❌ | ~ | ✅✅ |
-| **Correctness/tests/deps/migrations** | ❌ | ❌ | ❌ | ~ | ✅✅ |
-| Full-stack (not just HTML/CSS) | ❌ | ❌ | ❌ | ✅ | ✅ |
-| **Executable gate (CI/hook)** | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Agent-agnostic (# ecosystems) | 3 | 1 | 1–2 | 1 | **5** |
-| Verify-before-done loop | ~ | ❌ | ❌ | ❌ | ✅ |
+### Scope scoreboard
 
-**Thesis:** Hallmark owns the *design* half brilliantly; we match its design rigor *and* add the
-entire *code-craft* half plus executable enforcement and broader agent reach — so a team can adopt
-**one** skill instead of a design skill + a security linter + a review checklist.
+| Capability | no-ai-slop | Anti-AI-UI | Hallmark | **FixMyVibe** |
+|---|:--:|:--:|:--:|:--:|
+| Voice-preserving prose workflow | Strong | Partial | No | Included |
+| Detailed UI review | No | Strong | Strong | Included |
+| Positive design direction | No | Catalog | Catalog | Project-derived method |
+| Code security, correctness, and dependencies | No | Pattern list | No | Risk-profiled gate |
+| AI-system security and evaluation | No | No | No | Included |
+| Non-web profiles | No | No | No | Mobile, CLI, library, infra, data, IoT |
+| Executable repository gate | No | Search tooling | No | PowerShell and shell |
+| Evidence-before-done workflow | Content eval | UI workflow | Design gate | Full delivery gate |
+
+**Thesis:** a useful craft skill must connect code, design, content, and AI-system risks to evidence.
+Its executable checks are one heuristic layer beside stack-native scanners, tests, and human review,
+not a replacement for them.
 
 ## Sources
+- https://github.com/petergyang/no-ai-slop
+- https://github.com/petergyang/no-ai-slop/blob/main/skills/no-ai-slop/SKILL.md
+- https://github.com/petergyang/no-ai-slop/blob/main/skills/no-ai-slop/eval.md
+- https://github.com/Vanszs/Anti-AI-UI
 - https://github.com/nutlope/hallmark
 - https://github.com/Nutlope/hallmark/blob/main/skills/hallmark/SKILL.md
 - https://www.explainx.ai/blog/nutlope-hallmark-anti-ai-slop-design-skill-july-2026

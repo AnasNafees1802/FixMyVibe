@@ -50,9 +50,11 @@ These are hard rules; violations are gate failures (see `FORBIDDEN-PATTERNS.md �
 - Prefer OKLCH for a perceptually even palette. Emit a `tokens.css` even for a single page.
 
 **Typography**
-- Two faces: one display + one body (or a deliberate mono-only choice). Not Inter-for-everything.
-- Use weight/color/underline for emphasis. **No italic headings** (a reliable AI tell).
-- Hero headline short and specific (≤ ~7 words); real hierarchy, not uniform weight.
+- Define display and body roles. One family or several can work; do not add a face only to look custom.
+- Use weight, color, underline, or italics according to the type system. Treat default italic headings
+  as a review signal, not a universal defect.
+- Keep the hero headline specific and proportional to the idea. Build hierarchy instead of enforcing
+  an arbitrary word count.
 
 **Layout & responsiveness**
 - Image/card grids use `minmax(0, 1fr)`, never bare `1fr` (prevents blowout).
@@ -61,10 +63,11 @@ These are hard rules; violations are gate failures (see `FORBIDDEN-PATTERNS.md �
   (`overflow-wrap: anywhere; min-width: 0`) — no two-line buttons breaking layout.
 
 **States & motion**
-- Every interactive element ships **8 states**: default, hover, focus, active, disabled, loading,
-  error, success. Every view ships empty / loading / error / success / zero-results.
-- Animate only `transform`/`opacity`. Three named easings (`--ease-out/-in/-in-out`) — never raw
-  `ease`, never bounce. Honor `prefers-reduced-motion` (spatial motion → ≤150ms opacity).
+- Every interactive element ships every applicable state: default, hover, focus, active, disabled,
+  pending, error, and success. Do not invent meaningless states for static elements. Every data view
+  handles empty, loading, error, success, and zero-results where those outcomes can occur.
+- Prefer compositor-friendly motion and named easing tokens. Use layout animation only when its value
+  outweighs its cost. Honor `prefers-reduced-motion` with a non-spatial or instant alternative.
 - `:focus-visible` ring, ≥3:1 contrast, instant (never animated). Never `outline:none` without a
   replacement.
 

@@ -28,6 +28,14 @@ design skill does.
 8. **Craft & completeness** — tokens, all states, accessibility (WCAG AA, keyboard, focus),
    responsive; real content, not filler/fake proof.
 
+### Content axis (if user-facing prose is produced)
+9. **Truth & usefulness** — claims verified; specific to the product and audience; action and
+   consequence clear; no generated filler, fake proof, or hidden limitation.
+
+### AI-system axis (if models, retrieval, embeddings, or agent tools are involved)
+10. **Bounded agency & evaluation** — model output treated as untrusted; permissions enforced in
+    code; side effects bounded and confirmable; privacy handled; risk-based evaluations pass.
+
 ## The bar
 - **Every applicable axis must be ≥ 4** to emit (or to call a task done). Any axis **≤ 3** → name the
   specific weakness, fix it, re-score. Do not average away a low axis with high ones.
@@ -51,8 +59,10 @@ When invoked as `audit`, return this — and nothing that edits the target:
 
 ```
 FixMyVibe audit — <target>
+Risk: <routine|sensitive|critical> · Profiles: <selected profiles>
 Scores: security X/5 · correctness X/5 · maintainability X/5 · honesty X/5
         [hierarchy X/5 · specificity X/5 · restraint X/5 · craft X/5]   ← if UI
+        [truth/usefulness X/5] [bounded agency/evaluation X/5]          ← when applicable
 Verdict: PASS (all ≥4, no blocklist hit) | FAIL
 
 Punch list (highest impact first):

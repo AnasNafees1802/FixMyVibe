@@ -3,8 +3,9 @@
 Keep the whole `fixmyvibe/` folder together (the references, adapters, and `bin/` must travel with
 `SKILL.md`).
 
-## Zero-clone — one-line remote install
-Installs into every detected agent straight from GitHub:
+## Remote convenience install
+This executes code fetched from the repository's current `main` branch. Review the bootstrap at the
+URL first. For pinned or regulated environments, clone a reviewed commit and use the local installer.
 ```powershell
 # Windows (PowerShell)  — add  $env:FIXMYVIBE_ALL='1';  before it to force all three
 irm https://raw.githubusercontent.com/AnasNafees1802/FixMyVibe/main/bootstrap.ps1 | iex

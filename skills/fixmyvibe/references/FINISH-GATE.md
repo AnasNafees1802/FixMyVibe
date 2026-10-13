@@ -14,8 +14,10 @@ Perpetua's Stop-guard: while the gate is red, the mission's Definition of Done i
 ## Gate 0 — Scope, honesty & scored self-critique
 - [ ] I did exactly what was asked — no silent scope creep, no unrequested features.
 - [ ] I can state what I ran and what passed. Anything unverified is labeled unverified.
+- [ ] I selected the risk tier and every applicable profile from `RISK-PROFILES.md`; for sensitive
+      or critical work I recorded trust boundaries and top abuse cases.
 - [ ] I scored the work with `SELF-CRITIQUE.md`; **every applicable axis is ≥4** (security,
-      correctness, maintainability, honesty [+ hierarchy, specificity, restraint, craft for UI]);
+      correctness, maintainability, honesty plus applicable design/content/AI-system axes);
       no axis averaged away; scores stamped where the work lives.
 
 ## Gate 1 — It actually runs (evidence, not vibes)
@@ -30,6 +32,10 @@ Perpetua's Stop-guard: while the gate is red, the mission's Definition of Done i
 - [ ] Every external input validated + sanitized server-side.
 - [ ] Every new dependency verified to exist, be correct, and be necessary.
 - [ ] No destructive/data-losing operation runs without backup + human approval (Perpetua guardrail).
+- [ ] I selected and ran risk-appropriate layers from `SECURITY-VERIFICATION.md`; scanner errors or
+      skipped required checks are failures, not clean results.
+- [ ] For sensitive/critical changes, confirmed findings have regression tests and residual risk has
+      an owner, reason, and verification or review path.
 
 ## Gate 3 — Robustness (against FORBIDDEN-PATTERNS §B)
 - [ ] No swallowed errors; unhappy paths handled (null/empty/error/unauthorized/zero).
@@ -46,6 +52,21 @@ Perpetua's Stop-guard: while the gate is red, the mission's Definition of Done i
 - [ ] Accessibility: semantic HTML, WCAG AA contrast, keyboard-operable, visible focus, labels/alt,
       reduced-motion honored.
 - [ ] Responsive: no body horizontal scroll; works at mobile/tablet/desktop.
+- [ ] WCAG 2.2 checks include unobscured focus, zoom/reflow, target size, error identification, and
+      accessible authentication where applicable; keyboard path was checked manually.
+
+## Gate 4B — Content (only if user-facing prose was produced)
+- [ ] Every metric, customer, testimonial, integration, citation, and capability claim is verified.
+- [ ] Copy names the real product behavior, audience, action, and consequence; no filler or fake urgency.
+- [ ] Errors and destructive actions say what happened, what remains safe, and what the user can do.
+- [ ] I ran the read-aloud and product-specificity checks in `CONTENT-CRAFT.md`.
+
+## Gate 4C — AI systems (only if models, retrieval, embeddings, or agent tools are involved)
+- [ ] Model/retrieved/tool output is untrusted and cannot grant permission or flow raw into a sink.
+- [ ] Tools use least privilege, typed/validated arguments, bounds, audit logs, and fresh confirmation
+      for consequential actions.
+- [ ] Tenant isolation, privacy, retention, prompt injection, failure, cost, and recovery were tested.
+- [ ] Versioned evaluations passed predeclared thresholds; model/prompt/data versions and limits recorded.
 
 ## Gate 5 — The maintainer test
 - [ ] A stranger (or you at 3am) could read this, understand *why*, and safely extend it.
@@ -70,9 +91,11 @@ lint + typecheck     # Gate 1
 secret scan diff     # Gate 2 (gitleaks/trufflehog complements the audit's high-entropy grep)
 a11y check on UI     # Gate 4 (axe/pa11y/Lighthouse); visual-regression via Playwright if available
 ```
-`bin/fixmyvibe-audit.*` returns non-zero on any BLOCKER — use it as a pre-commit or agent Stop hook.
-The secret check matches credential key-names case-insensitively (catches `API_KEY = "…"`), and
-deliberately exempts obvious placeholders, env-var references, and test fixtures
-(`changeme`, `process.env.*`, `*-test`, `example`, …) so you never have to contort real test code to
-satisfy it. It is a heuristic greppable slice, not a parser: the human-judgment items (logo test,
-scope, scored critique, maintainer test) still require you to actually look.
+`bin/fixmyvibe-audit.*` scans only added lines in staged mode. Exit 1 means a blocker (or a warning
+under strict mode); exit 2 means the scan failed and the gate is incomplete. The PowerShell edition
+also supports JSON output for CI. Obvious placeholder values are suppressed narrowly, but test and
+example files are not globally exempt because real credentials leak there too.
+
+This is a heuristic text scan, not a parser or a security verdict. It cannot prove authorization,
+safe data flow, dependency integrity, accessibility, content truth, or design quality. Use the risk
+profiles, stack-native tools, tests, and manual checks above.
