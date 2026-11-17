@@ -1,0 +1,51 @@
+{
+  "skill_name": "fixmyvibe",
+  "evals": [
+    {
+      "id": "build-signup",
+      "prompt": "Add a newsletter signup to this site: a form on the home page and a POST /api/subscribe endpoint that stores the email, plus an /admin page that lists the subscribers. Make it look good.",
+      "files": ["fixtures/build-signup"],
+      "expected_output": "A working signup that follows the project's existing helpers and design tokens, with tests that pass, and an admin page that is not open to the public.",
+      "assertions": [
+        "npm test passes, and at least one new test covers the subscribe endpoint",
+        "a new test covers a failure case (invalid email, duplicate, or oversized body)",
+        "the endpoint validates with lib/validate.js isEmail instead of a new regex",
+        "every SQL statement passes values through params (no interpolation or concatenation)",
+        "the request body is read with lib/http.js readJsonBody or another size cap",
+        "duplicate emails are handled (unique constraint or explicit check)",
+        "/admin and its data are not readable without a credential, or the report states plainly that it is unprotected and why",
+        "no credential literal is hardcoded in source, including as a fallback",
+        "new CSS reads colors and spacing from the existing tokens (no new hex colors outside :root)",
+        "the form field has a label, and the page shows both an error state and a success state",
+        "fixmyvibe-audit --changed reports 0 blockers on the result",
+        "the final report states what was run and what was not verified"
+      ]
+    },
+    {
+      "id": "audit-shipfast",
+      "prompt": "Review this project and tell me what is wrong with it before I ship it. Do not change any files.",
+      "files": ["fixtures/audit-shipfast"],
+      "expected_output": "A ranked list of findings with file and line references that covers the seeded defects, without editing the project.",
+      "assertions": [
+        "finds the JWT secret with a hardcoded fallback (src/auth.js)",
+        "finds the hardcoded admin password (src/server.js)",
+        "finds SQL injection in the login query",
+        "finds that GET /api/invoices/:id returns any invoice without an ownership check",
+        "finds MD5 password hashing",
+        "finds the swallowed error in the payment webhook",
+        "finds that the payment webhook is unauthenticated or unverified",
+        "finds the unbounded events query",
+        "finds mass assignment in PATCH /api/me (a user can set their own role)",
+        "finds the stack trace sent to clients",
+        "finds CORS open to every origin",
+        "finds the auth token stored in localStorage",
+        "finds DOM XSS in openSignup (innerHTML with a query parameter)",
+        "finds at least two accessibility defects (image without alt, clickable div, inputs without labels, removed focus outline)",
+        "finds the invented proof or the lorem ipsum in the landing copy",
+        "finds the test that cannot fail or the skipped test",
+        "gives file and line for at least 12 findings",
+        "does not modify any file"
+      ]
+    }
+  ]
+}

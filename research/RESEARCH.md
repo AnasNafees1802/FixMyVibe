@@ -421,3 +421,37 @@ not a replacement for them.
 - https://www.builder.io/blog/agents-md
 - https://cursor-alternatives.com/blog/system-prompts-for-ai-coding-agents/
 - https://dev.to/mkomeyl94/from-prompt-to-production-mastering-rules-skills-and-subagents-in-cursor-47m4
+
+---
+
+## D3. November 2026 round: what the strongest alternatives do, and what we took
+
+Sources were opened on 2026-11-16. Star counts are as read that day.
+
+| Project | Mechanism that changes behavior | What we took |
+|---|---|---|
+| obra/superpowers (verification-before-completion) | A claim, evidence, not-evidence table and a red-flags list written against measured agent rationalizations | `SKILL.md` sections 4 and 5 |
+| leonxlnx/taste-skill 2.5 | A Stop hook that blocks once, with an anti-trap budget and waivers that need a reason | `--hook stop`, one block per stop, reasoned `allow` annotations |
+| pbakaus/impeccable | Deterministic detector with a per-edit tier and a Stop tier | `--hook edit` reports blockers only; warnings wait for a manual run |
+| Anthropic security-guidance plugin | Regex rules scoped by path and extension | Rule scopes in `bin/rules.conf` |
+| Anthropic security-review, code-review | Findings need 80 percent confidence and an exploit scenario, checked by a separate pass | The refutation method in `references/SELF-CRITIQUE.md`, replacing 1 to 5 self-scores |
+| Anthropic skill-creator, agentskills.io | `evals/evals.json`, with-skill and without-skill runs | `evals/` |
+| trailofbits/skills (insecure-defaults) | Fallback-secret seeds; a test that every documented example fires a rule; POSIX classes only | SEC007, the corpus coverage test, the rule-pack lint |
+| gitleaks | Judge the captured value: skip pure-letter values and template references | The `unless` clause on SEC003, SEC004, SEC005 |
+
+Sources:
+- https://github.com/obra/superpowers/blob/main/skills/verification-before-completion/SKILL.md
+- https://github.com/leonxlnx/taste-skill
+- https://github.com/pbakaus/impeccable
+- https://github.com/anthropics/claude-plugins-official/tree/main/plugins/security-guidance
+- https://github.com/anthropics/claude-code-security-review
+- https://github.com/anthropics/skills/tree/main/skills/skill-creator
+- https://agentskills.io/specification
+- https://github.com/trailofbits/skills
+- https://github.com/gitleaks/gitleaks
+- https://code.claude.com/docs/en/hooks and https://code.claude.com/docs/en/skills
+
+Not adopted, with the reason: rendered-page checks in a real browser (needs Node and Chrome, which
+breaks the no-dependency rule), a central baseline file for legacy findings (the diff modes cover
+the same need), and hook wiring for Gemini CLI, Cursor native hooks, and Antigravity (their event
+formats were not tested here, so no configuration is published for them).

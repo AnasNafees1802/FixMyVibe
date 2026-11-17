@@ -1,20 +1,22 @@
-# Adapter — Google Antigravity
+# Antigravity
 
-Antigravity (Google's agent-first IDE) uses agent **rules / context files** and supports
-`AGENTS.md`-style project guidance and workflow rules.
+## Install
+Antigravity loads global skills from `~/.gemini/config/skills/` and workspace skills from
+`<workspace>/.agents/skills/`. `install.ps1` or `install.sh` writes
+`~/.gemini/config/skills/fixmyvibe/` when Antigravity is detected. Invoke it with `/fixmyvibe`.
 
-## Wiring
-1. Keep the `fixmyvibe/` folder in the repo.
-2. Add the FixMyVibe standard to Antigravity's rules/context (the project rules panel or an
-   `AGENTS.md` at the repo root — same body as the Codex adapter):
-   - Persona: senior staff engineer + designer with taste.
-   - READ before write · REFUSE the average (`references/FORBIDDEN-PATTERNS.md`) · VERIFY before done
-     (`references/FINISH-GATE.md`).
-3. Because Antigravity leans on autonomous, multi-step agent runs, make the **Finish Gate** an
-   explicit acceptance step in the task/plan: the agent must run the gate and attach evidence before
-   marking the task complete. Treat destructive/deploy actions as human-approval checkpoints.
+Older FixMyVibe versions wrote a workflow file and an `AGENTS.md` block. Antigravity has deprecated
+workflows in favor of skills. Run the installer with `-RemoveLegacy` (PowerShell) or
+`REMOVE_LEGACY=1` (shell) to clean them up.
 
-## Reactive limit note
-Antigravity surfaces rate limits reactively (`RESOURCE_EXHAUSTED` / `retryDelay`). If you run this
-under Perpetua, the watchdog handles resume; the ledger keeps the exact next action so a paused run
-resumes losslessly.
+## Making the gate part of a task
+Antigravity runs long, multi-step tasks on its own. Put the gate in the task itself: "Before
+marking this complete, run the fixmyvibe audit with --changed and attach the output." Treat deploys
+and destructive actions as points where a person approves.
+
+This project has not tested hook enforcement in Antigravity. The audit also runs from a git
+pre-commit hook or CI, which works with any agent:
+
+```bash
+bash ~/.gemini/config/skills/fixmyvibe/bin/fixmyvibe-audit.sh --staged
+```

@@ -1,0 +1,6 @@
+body { font-family: Inter, sans-serif; margin: 0; }
+.hero { text-align: center; padding: 96px 24px; color: white; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+.cta { display: inline-block; padding: 12px 24px; border-radius: 16px; background: white; color: #764ba2; cursor: pointer; }
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; padding: 48px; }
+.card { padding: 24px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); transition: all 0.3s ease; }
+input, button { outline: none; padding: 12px; }

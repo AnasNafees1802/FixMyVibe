@@ -1,0 +1,11 @@
+{
+  "name": "pondlog",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Field notes site. Node standard library only.",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --no-warnings --test"
+  },
+  "engines": { "node": ">=22.5" }
+}

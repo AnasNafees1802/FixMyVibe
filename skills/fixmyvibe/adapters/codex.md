@@ -1,26 +1,35 @@
-# Adapter — OpenAI Codex / Codex CLI
+# Codex
 
-Codex reads an **`AGENTS.md`** at the repo root (and honors nested ones) for project + behavior
-context. It also supports skill-style folders in some clients.
+## Install
+`install.ps1` or `install.sh` copies this folder to `~/.agents/skills/fixmyvibe/`, the user skill
+location Codex reads. For one project, copy it to `<repo>/.agents/skills/fixmyvibe/`. Invoke it
+with `$fixmyvibe`, pick it from `/skills`, or let Codex match it from the task.
 
-## AGENTS.md wiring
-Add a section to your root `AGENTS.md`:
-```md
-## Craft standard — FixMyVibe (do not skip)
-Adopt the persona of a senior staff engineer AND a product designer with taste.
-On every code or UI task:
-- READ before write: match the repo's stack/conventions/tokens; reuse before inventing; do exactly
-  what's asked (no scope creep).
-- REFUSE the average: never emit anything listed in `fixmyvibe/references/FORBIDDEN-PATTERNS.md`
-  (secrets in code, string-built SQL, unauthorized endpoints, happy-path-only; Inter-only + purple
-  gradient + identical rounded cards + untouched shadcn defaults).
-- VERIFY before done: run the code + tests and pass `fixmyvibe/references/FINISH-GATE.md` fresh;
-  report done only with evidence. Never declare done on a red gate.
-Deep references: `fixmyvibe/references/CODE-CRAFT.md`, `.../UI-CRAFT.md`.
+Older FixMyVibe versions installed to `~/.codex/skills/` and `~/.codex/prompts/`, and added a block
+to `~/.codex/AGENTS.md`. Codex does not read the first, and has deprecated the second. Run the
+installer with `-RemoveLegacy` (PowerShell) or `REMOVE_LEGACY=1` (shell) to clean them up.
+
+## Enforce it with hooks
+Codex reads hooks from `~/.codex/hooks.json` or `<repo>/.codex/hooks.json`, in the same shape as
+Claude Code, and asks you to trust them through `/hooks` before they run:
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      { "hooks": [{ "type": "command", "command": "bash \"$HOME/.agents/skills/fixmyvibe/bin/fixmyvibe-audit.sh\" --hook edit" }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "bash \"$HOME/.agents/skills/fixmyvibe/bin/fixmyvibe-audit.sh\" --hook stop" }] }
+    ]
+  }
+}
 ```
-Commit the `fixmyvibe/` folder to the repo so Codex can open the references.
 
-## As a skill
-If your Codex client supports `SKILL.md` skills (e.g. `npx skills add`-style installers), install the
-folder as-is; the frontmatter description drives triggering. Otherwise the AGENTS.md route above is
-fully sufficient.
+The stop hook is the one that matters: it scans everything changed since the last commit and
+exits 2 with the report when a blocker is present. The edit hook needs the event to carry a
+`file_path`; when it does not, the hook does nothing. This project tests hook mode against the
+Claude Code event shape only, so confirm the behavior once in Codex before relying on it.
+
+## Always on, without hooks
+Add one line to `AGENTS.md`: "For any code, UI, or copy change, follow the fixmyvibe skill."

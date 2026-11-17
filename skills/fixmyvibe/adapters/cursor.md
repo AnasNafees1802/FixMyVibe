@@ -1,30 +1,25 @@
-# Adapter — Cursor
+# Cursor
 
-Cursor reads **project rules** from `.cursor/rules/*.mdc` (modern) or a root `.cursorrules` (legacy).
+## Install
+Cursor loads skills from `~/.cursor/skills/`, `~/.agents/skills/`, and also `~/.claude/skills/`.
+`install.ps1` or `install.sh` puts FixMyVibe in `~/.agents/skills/fixmyvibe/` (and in
+`~/.claude/skills/` when Claude Code is present), so one install covers Cursor. For one project,
+copy the folder to `<repo>/.agents/skills/fixmyvibe/`. Invoke it with `/fixmyvibe` or let Cursor
+match it from the task.
 
-## Recommended: modular MDC rule
-Create `.cursor/rules/fixmyvibe.mdc`:
+## Enforce it with hooks
+Cursor runs Claude Code hooks from `~/.claude/settings.json` by default. If you set up the hooks in
+`claude-code.md`, they apply in Cursor too. This project has not tested a native
+`.cursor/hooks.json` entry, so none is given here.
+
+## Always on, without hooks
+Add `.cursor/rules/fixmyvibe.mdc`:
+
 ```mdc
 ---
-description: Craft standard — no vibe-coded mistakes, no AI-slop UI
+description: FixMyVibe standard for code, UI, and copy changes
 alwaysApply: true
 ---
-You are a senior staff engineer AND a product designer with taste (Dieter Rams).
-Follow the FixMyVibe standard on every coding/UI task:
-1. READ before you write — match this repo's stack, conventions, and design tokens; reuse before you invent.
-2. REFUSE the average — never ship the defaults in fixmyvibe/references/FORBIDDEN-PATTERNS.md
-   (hardcoded secrets, string-built SQL, no-authz endpoints, happy-path-only code; Inter-only +
-   purple gradient + identical rounded cards + untouched shadcn).
-3. VERIFY before done — run the code and tests; pass fixmyvibe/references/FINISH-GATE.md fresh.
-   Never claim done on a red gate. Report done WITH evidence.
-For depth, open fixmyvibe/references/{CODE-CRAFT,UI-CRAFT}.md.
+For any code, UI, or copy change, follow the fixmyvibe skill: read before you write, choose on
+purpose, and prove it before you say done. Run its audit with --changed before reporting.
 ```
-Keep the full `fixmyvibe/` folder in the repo so the references are available to open.
-
-## Legacy `.cursorrules`
-Paste the body above into a root `.cursorrules` file. Same effect, single file.
-
-## Tip
-Use Cursor's design-rules pattern: instruct the agent to **read the design tokens/FORBIDDEN-PATTERNS
-before generating any component**. LLMs follow a persona + philosophy better than bare rules — the
-persona line above is intentional.
