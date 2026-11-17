@@ -1,0 +1,48 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  shell:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shell engine tests (awk path and bash fallback, corpus, behavior)
+        shell: bash
+        run: bash tests/run.sh
+      - name: Keep the shell findings for the parity check
+        uses: actions/upload-artifact@v4
+        with:
+          name: corpus-got-sh-${{ matrix.os }}
+          path: tmp/corpus-got-sh.txt
+
+  powershell:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shell engine first, so the PowerShell run can compare findings
+        shell: bash
+        run: bash tests/run.sh
+      - name: Windows PowerShell 5.1
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tests/run.ps1
+      - name: PowerShell 7
+        shell: pwsh
+        run: pwsh -NoProfile -File tests/run.ps1
+
+  self-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The repository passes its own gate, warnings included
+        run: FIXMYVIBE_SCAN_SELF=1 bash skills/fixmyvibe/bin/fixmyvibe-audit.sh --strict-warnings .

@@ -1,85 +1,125 @@
-# DESIGN-DIRECTIONS — pick a deliberate direction, then vary it
+# Design directions
 
-The average AI UI happens because the model never *chooses* — it defaults. This file forces a
-choice: an **aesthetic direction**, a **macrostructure**, and then a **diversification** step so two
-FixMyVibe builds never feel like color-swaps of one template. Use this together with
-`UI-CRAFT.md` (the token/state/a11y standard). Absorbed and generalized from the best of the field
-(Hallmark's macrostructure + diversification, awesome-claude-design's families, Koomook's contrast).
+Generic AI interfaces happen because the model never chooses; it defaults. This file makes you
+choose a direction, a structure, and three dials before any markup, and then check that plan once
+against the brief. Use it with `UI-CRAFT.md`, which covers tokens, states, and accessibility.
 
----
+If the project already has a design system (a tokens file, a `design.md`, an established component
+library), skip the choosing and conform to it. Consistency wins once a system exists.
 
-## Step A — Choose ONE aesthetic direction (state it on the page)
-Match the product's domain, audience, and the 3 brand adjectives from `UI-CRAFT.md`. Do not blend
-more than two. Reference exemplars are for *taste*, never to clone.
+Contents: A Direction · B Structure · C Dials · D Check the plan · Motion recipes · Design gates
 
-| Direction | Feel | Type & color signature | Fits |
+## A. Choose one direction
+
+Match the product's domain, its audience, and the three brand adjectives from `UI-CRAFT.md`. Blend
+at most two. The exemplars are for calibration, not for copying.
+
+| Direction | Feel | Type and color | Fits |
 |---|---|---|---|
-| **Editorial Minimal** | calm, confident, spacious | serif display + clean sans body; neutral paper + one restrained accent | SaaS, dev tools, docs (Linear, Stripe, Vercel) |
-| **Warm Editorial** | human, approachable, crafted | serif body; terracotta/cream/clay | writing, community, AI-with-warmth (Notion, Substack) |
-| **Terminal-Core** | precise, technical, insider | monospace; phosphor green/amber on near-black | CLIs, infra, dev (Warp, Raycast, Ollama) |
-| **Data-Dense Pro** | dense, powerful, legible | tight sans; saturated on dark dashboards | analytics, observability (PostHog, ClickHouse) |
-| **Cinematic Dark** | dramatic, premium, motion-forward | oversized display; film-grade gradients (purposeful, not the slop blob) | media, launches, hardware (Runway, NVIDIA) |
-| **Playful Color** | friendly, energetic, tactile | rounded display; high-saturation + illustration | consumer, education (Figma, Duolingo) |
-| **Glass / Soft-Futurism** | sleek, modern, quiet-tech | light sans; frosted translucency, soft depth | Apple-adjacent, hardware/media (use sparingly — near slop) |
-| **Neon Brutalist** | bold, loud, opinionated | mixed type, hard edges; one saturated hue on stark ground | editorial, culture, indie (The Verge, PlayStation) |
+| Editorial Minimal | calm, confident, spacious | serif display with a clean sans; paper neutrals and one restrained accent | SaaS, developer tools, docs |
+| Warm Editorial | human, approachable, crafted | serif body; terracotta, cream, clay | writing, community |
+| Terminal | precise, technical | monospace; green or amber on near-black | CLIs, infrastructure |
+| Data-Dense | dense, powerful, legible | tight sans; saturated accents on dark | analytics, observability |
+| Cinematic Dark | dramatic, premium | oversized display; purposeful gradients | media, launches, hardware |
+| Playful Color | friendly, energetic | rounded display; high saturation and illustration | consumer, education |
+| Soft Glass | sleek, quiet | light sans; translucency and soft depth | hardware, media (close to a generic default, use with care) |
+| Brutalist | bold, opinionated | mixed type, hard edges; one saturated hue on a stark ground | editorial, culture |
+| Industrial | engineered, exact | condensed grotesque; steel neutrals and a signal color | manufacturing, logistics, tools |
 
-State it: *"Direction: Terminal-Core — mono display, amber accent on #0b0b0c."*
+State it in one line: "Direction: Terminal. Mono display, amber accent on #0b0b0c."
 
-## Step B — Choose a macrostructure (not the default template)
-The slop default is `hero → 3 feature cards → testimonials → pricing → CTA`. Pick a shape driven by
-the *content*, and state it:
-- **Marquee Hero** (one big claim + proof) · **Bento Grid** (modular capability tiles) ·
-  **Long Document / Manifesto** (narrative, editorial) · **Stat-Led** (numbers first) ·
-  **Workbench / Product-First** (show the actual UI) · **Gallery / Index** (many items) ·
-  **Comparison** (vs. status quo) · **Quote-Led** (voice-driven).
-Vary card sizes to express hierarchy; asymmetry and whitespace are tools, not bugs.
+## B. Choose a structure
 
-## Step C — Diversification rule (kill the monoculture)
-Your build must differ from any prior build in the same project on **≥1 axis**: (1) macrostructure,
-(2) display-type treatment, (3) accent hue/temperature. If a `design.md`/tokens file already governs
-the project, invert this: **conform** to the system instead (consistency wins once a system exists).
+The default page is hero, three feature cards, testimonials, pricing, call to action. Pick a shape
+from the content instead, and state it:
 
----
+- **Marquee:** one large claim and its proof.
+- **Bento:** capability tiles of different sizes.
+- **Long document:** a narrative, read top to bottom.
+- **Stat-led:** real numbers first.
+- **Workbench:** the actual product interface is the page.
+- **Index:** many items, built for scanning.
+- **Comparison:** this against the status quo.
+- **Quote-led:** a real voice carries the page.
 
-## Concrete design gates (parity with the best + our additions)
-These are hard rules; violations are gate failures (see `FORBIDDEN-PATTERNS.md §C`).
+Vary card sizes to show what matters most. Asymmetry and whitespace are tools.
 
-**Tokens & color**
-- Every color/font/space value references a named token (`var(--color-accent)`, `--space-md`,
-  `--font-display`). No inline hex/OKLCH/`"Some Font"` mid-render — lift new values into `:root` first.
-- Prefer OKLCH for a perceptually even palette. Emit a `tokens.css` even for a single page.
+## C. Set three dials
 
-**Typography**
-- Define display and body roles. One family or several can work; do not add a face only to look custom.
-- Use weight, color, underline, or italics according to the type system. Treat default italic headings
-  as a review signal, not a universal defect.
-- Keep the hero headline specific and proportional to the idea. Build hierarchy instead of enforcing
-  an arbitrary word count.
+Each runs 1 to 10. Pick values from the brief, state them, and let the user override them ("make it
+denser", "less motion"). Defaults are in the middle band.
 
-**Layout & responsiveness**
-- Image/card grids use `minmax(0, 1fr)`, never bare `1fr` (prevents blowout).
-- Root html/body use `overflow-x: clip` (never `hidden` as a scroll-hider). No body horizontal scroll.
-- Responsive at 320 / 375 / 414 / 768 / desktop. Clickable text wraps long words
-  (`overflow-wrap: anywhere; min-width: 0`) — no two-line buttons breaking layout.
+- **Variance:** distance from a safe centered layout. 1 to 3 calm and centered, 4 to 6 confident
+  asymmetry and varied card sizes, 7 to 10 experimental with broken grids and overlap. Do not
+  exceed what the content can carry.
+- **Motion:** how much moves. 1 to 2 state changes only, 3 to 5 hover and one-time scroll reveals,
+  6 to 10 orchestrated or scroll-driven sequences.
+- **Density:** information per screen. 1 to 3 spacious, 4 to 6 balanced product, 7 to 10 dense
+  dashboard. Density never costs hierarchy or touch target size.
 
-**States & motion**
-- Every interactive element ships every applicable state: default, hover, focus, active, disabled,
-  pending, error, and success. Do not invent meaningless states for static elements. Every data view
-  handles empty, loading, error, success, and zero-results where those outcomes can occur.
-- Prefer compositor-friendly motion and named easing tokens. Use layout animation only when its value
-  outweighs its cost. Honor `prefers-reduced-motion` with a non-spatial or instant alternative.
-- `:focus-visible` ring, ≥3:1 contrast, instant (never animated). Never `outline:none` without a
-  replacement.
+State them: "Dials: variance 5, motion 4, density 4." Two builds from one brief with different
+dials should feel like different products.
 
-**Honesty in content (no fake proof)**
-- **No invented metrics** ("+47% conversion", "trusted by 50,000+") without real user data — use a
-  placeholder (`— metric to confirm`) or a different macrostructure.
-- **No redrawn UI chrome** (fake browser bars, code windows, phone frames) — use a real screenshot
-  or omit it. No stock "team at laptops", no unreplaced placeholders.
-- Cut motion/decoration that carries no information.
+## D. Check the plan once before building
 
-## The named-fingerprints blocklist (avoid the *new* averages)
-Even "distinctive" defaults converge. Do **not** reflexively ship: teal/cyan `#16d5e6` accent;
-animated "live"/AI status dots; 4px decorative left-rules on every card; serif-headline+sans-body as
-a thoughtless Anthropic mimic; three-column feature grid in the hero; untouched Lucide icon set;
-glassmorphism blob background. Each is allowed *only* as a deliberate, stated choice.
+Read your stated direction, structure, and dials against the brief and answer:
+
+1. Which choice comes from this product, and could not have been made for a different one?
+2. Which choice is still a default? Change it or give the reason.
+3. Does the structure put the user's first question first?
+
+Revise the plan, then build. Checking a plan costs a minute; rebuilding a page costs the task.
+
+## Motion recipes
+
+Scale how often these appear by the motion dial. Use CSS first; reach for a library only above 6.
+
+- **Tokens:** `--dur-fast: 150ms; --dur-mid: 240ms; --dur-slow: 420ms;` and three named easings
+  (`--ease-out`, `--ease-in`, `--ease-in-out`). No raw `ease`, no bounce.
+- **State change (every dial value):**
+  `transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);`
+  Pressed: `:active { transform: translateY(1px); }`
+- **Entrance (motion 3 and up):** start at `opacity: 0; transform: translateY(12px)`. An
+  `IntersectionObserver` adds a class that sets `opacity: 1; transform: none`. Stagger children with
+  `transition-delay: calc(var(--i) * 60ms)`. Reveal once; never loop.
+- **Loading:** a skeleton that matches the final layout, so nothing shifts. Not a spinner alone on
+  an empty page.
+- **Library tier (motion 6 and up):** keep the same durations and easings as the tokens. Animate
+  `transform`, `opacity`, and `filter` only, never width, height, top, or left.
+- **Reduced motion:** replace all movement with an opacity fade of 150ms or less.
+
+If removing an animation loses no information, remove it.
+
+## Design gates
+
+**Tokens and color**
+- Every color, font, and space value comes from a named token. Lift a new value into `:root`
+  before using it. Emit a tokens file even for a single page.
+- Name tokens by role (`--color-action`, `--color-surface`), not by appearance.
+- Prefer OKLCH for a palette that steps evenly.
+
+**Type**
+- Define display and body roles. One family can be enough; do not add a face only to look custom.
+- Size the headline to the idea. Build hierarchy with size, weight, and space.
+
+**Layout**
+- Grids of cards or images use `minmax(0, 1fr)`, not bare `1fr`.
+- No horizontal scroll on the body. Fix the element that overflows; do not hide it.
+- Check 320, 375, 768, and a large viewport. Long words in buttons wrap
+  (`overflow-wrap: anywhere; min-width: 0`).
+
+**States and focus**
+- Each interactive element has the states it can reach: hover, focus, active, disabled, pending,
+  error, success. Each data view handles empty, loading, error, and zero results.
+- Focus uses `:focus-visible`, at least 3:1 contrast, and is never animated.
+
+**Honest content**
+- No invented metrics or social proof. Use a different structure, or a placeholder that the report
+  names.
+- No redrawn browser bars, code windows, or phone frames presented as the product. Use a real
+  screenshot or leave it out.
+
+**Defaults that have become their own average**
+Each of these needs a stated reason: a teal or cyan accent, animated "live" status dots, a thin
+colored left border on every card, a serif headline over a sans body chosen only to look
+editorial, a three-column feature grid in the hero, an untouched icon set.

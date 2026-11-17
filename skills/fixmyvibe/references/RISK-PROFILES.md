@@ -4,11 +4,15 @@ No checklist covers every kind of software. Before editing, identify every appli
 Load the named standard, map trust boundaries, then test the failure modes that can cause real harm.
 If the project spans profiles, combine them. A mobile app with an API needs both profiles.
 
+Contents: Risk tier · Common core · Web and API · Mobile · Desktop and CLI · Library · Infrastructure
+and CI · Data pipeline · Embedded · AI-enabled · Evidence rule
+
 ## Risk tier
 
-Choose the highest tier that applies to the change:
+Choose the highest tier that applies to the change. `SKILL.md` section 1 adds a Quick tier below
+Standard for changes with no new input, data flow, or UI state.
 
-- **Routine:** local presentation or pure logic with no new trust boundary. Run project tests, static
+- **Standard:** local presentation or pure logic with no new trust boundary. Run project tests, static
   checks, the FixMyVibe audit, and UI checks where relevant.
 - **Sensitive:** authentication, authorization, money, personal data, uploads, network calls,
   parsers, dependencies, migrations, cryptography, or privileged automation. Add a written abuse

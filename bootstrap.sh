@@ -2,9 +2,9 @@
 # FixMyVibe one-line bootstrap (macOS / Linux).
 #
 # Install into every detected agent:
-#   curl -fsSL https://raw.githubusercontent.com/AnasNafees1802/FixMyVibe/main/bootstrap.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/AnasNafees1802/FixMyVibe/main/bootstrap.sh | bash   # fixmyvibe: allow DEP002 this is the documented way to run this script; INSTALL.md says to read it first
 #
-# Force all three agents (create dirs even if not detected):
+# Force all three locations (create folders even if no agent is detected):
 #   curl -fsSL https://raw.githubusercontent.com/AnasNafees1802/FixMyVibe/main/bootstrap.sh | ALL=1 bash
 #
 # Downloads the repo to a temp folder, runs skills/fixmyvibe/install.sh, then cleans up.

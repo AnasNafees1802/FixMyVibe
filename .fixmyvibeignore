@@ -1,0 +1,11 @@
+# Paths the FixMyVibe audit skips when this repository scans itself, and rules it turns off.
+# These files hold the patterns on purpose: the rule pack, its labeled corpus, the catalog of
+# forbidden patterns, the deliberately flawed eval projects, and historical research notes.
+skills/fixmyvibe/bin/rules.conf
+skills/fixmyvibe/references/FORBIDDEN-PATTERNS.md
+skills/fixmyvibe/references/CONTENT-CRAFT.md
+tests/corpus.txt
+tests/run.sh
+tests/run.ps1
+evals/fixtures
+research

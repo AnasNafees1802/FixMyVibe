@@ -1,86 +1,86 @@
 #!/usr/bin/env bash
-# install.sh - Install the FixMyVibe skill into Claude Code, Codex, and Antigravity,
-# and register a /fixmyvibe slash command in each. Mirrors install.ps1.
+# install.sh - Install the FixMyVibe skill for the agents on this machine. Mirrors install.ps1.
+#
+# Three locations cover every supported agent:
+#   claude       ~/.claude/skills/fixmyvibe          Claude Code (Cursor reads it too)
+#   agents       ~/.agents/skills/fixmyvibe          Codex, Cursor, Gemini CLI
+#   antigravity  ~/.gemini/config/skills/fixmyvibe   Antigravity
 #
 # Usage:
-#   ./install.sh                 # auto: install into every agent detected on this machine
-#   ALL=1 ./install.sh           # install into all three even if not detected (creates dirs)
-#   AGENTS="claude codex" ./install.sh   # install into the named agent(s) only
-#   HOME_DIR=/tmp/home ./install.sh      # override HOME (for testing)
-# Idempotent: copies overwrite; command file is rewritten; AGENTS.md block inserted once.
+#   ./install.sh                          install into every location whose agent is detected
+#   ALL=1 ./install.sh                    install into all three, creating folders
+#   AGENTS="claude agents" ./install.sh   install into the named locations only
+#   REMOVE_LEGACY=1 ./install.sh          also remove what older FixMyVibe installers left behind
+#   HOME_DIR=/tmp/h ./install.sh          use another home folder (for testing)
+#
+# Re-runnable: each run replaces the installed copy with this one.
 set -euo pipefail
 
-SKILL_NAME='fixmyvibe'
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HOME_DIR="${HOME_DIR:-$HOME}"
-MARKER='<!-- fixmyvibe:managed -->'
-[[ -f "$SRC/SKILL.md" ]] || { echo "SKILL.md not found next to installer ($SRC)"; exit 1; }
-CMD_TEMPLATE="$(cat "$SRC/command.md")"
-installed=()
+[[ -f "$SRC/SKILL.md" ]] || { echo "SKILL.md not found next to the installer ($SRC)." >&2; exit 1; }
 
-copy_skill() { # dest
-  mkdir -p "$1"; cp -R "$SRC/." "$1/"; rm -rf "$1/.git" 2>/dev/null || true
-}
-write_command() { # destFile skillDir
-  mkdir -p "$(dirname "$1")"
-  printf '%s\n' "${CMD_TEMPLATE//\{\{SKILL_DIR\}\}/$2}" > "$1"
-}
-add_agents_block() { # agentsFile skillDir
-  mkdir -p "$(dirname "$1")"; touch "$1"
-  if ! grep -qF "$MARKER" "$1"; then
-    cat >> "$1" <<EOF
-
-$MARKER
-## FixMyVibe craft standard (auto-installed)
-Before writing/generating/refactoring code or building any UI, follow the FixMyVibe skill at
-$2/SKILL.md: read-before-write, refuse the average, and pass references/FINISH-GATE.md
-(run bin/fixmyvibe-audit) before claiming done. Never emit anything in references/FORBIDDEN-PATTERNS.md.
-Invoke explicitly with /$SKILL_NAME.
-<!-- /fixmyvibe:managed -->
-EOF
+install_skill() { # dest
+  if [[ -e "$1" ]]; then
+    # Replace only a folder that is a FixMyVibe install, so a stale file from an older version cannot linger.
+    grep -qE '^name:[[:space:]]*fixmyvibe[[:space:]]*$' "$1/SKILL.md" 2>/dev/null ||
+      { echo "$1 exists and is not a FixMyVibe install. Move it away and run again." >&2; exit 1; }
+    rm -rf "$1"
   fi
+  mkdir -p "$1"; cp -R "$SRC/." "$1/"; rm -rf "$1/.git"
+  chmod +x "$1/bin/fixmyvibe-audit.sh" 2>/dev/null || true
 }
+wanted() { case " ${AGENTS:-} " in *" $1 "*) return 0 ;; esac; return 1; }
+detected() { local d; for d in "$@"; do [[ -e "$HOME_DIR/$d" ]] && return 0; done; return 1; }
 
-# detection
-det_claude=$([[ -d "$HOME_DIR/.claude" ]] && echo 1 || echo 0)
-det_codex=$([[ -d "$HOME_DIR/.codex" ]] && echo 1 || echo 0)
-det_anti=$([[ -d "$HOME_DIR/.gemini" || -d "$HOME_DIR/.antigravity" ]] && echo 1 || echo 0)
+used=()
+echo "== FixMyVibe installer ==  (home: $HOME_DIR)"
+target() { # name dir use detect...
+  local name="$1" dir="$2" use="$3"; shift 3
+  local go=0
+  if [[ "${ALL:-0}" == 1 ]]; then go=1
+  elif [[ -n "${AGENTS:-}" ]]; then
+    wanted "$name" && go=1
+    [[ "$name" == agents ]] && { wanted codex || wanted cursor || wanted gemini; } && go=1
+  elif detected "$@"; then go=1; fi
+  if [[ $go -eq 0 ]]; then printf 'skip      %-12s (not detected)\n' "$name"; return; fi
+  install_skill "$HOME_DIR/$dir"
+  printf 'installed %-12s %s\n' "$name" "$HOME_DIR/$dir"
+  used+=("$use")
+}
+target claude .claude/skills/fixmyvibe '/fixmyvibe in Claude Code' .claude
+target agents .agents/skills/fixmyvibe '$fixmyvibe in Codex, /fixmyvibe in Cursor and Gemini CLI' .codex .cursor .agents .gemini
+target antigravity .gemini/config/skills/fixmyvibe '/fixmyvibe in Antigravity' .gemini/config .gemini/antigravity
 
-want() { case " ${AGENTS:-} " in *" $1 "*) return 0;; esac; return 1; }
-explicit=$([[ -n "${AGENTS:-}" ]] && echo 1 || echo 0)
-do_claude=0; do_codex=0; do_anti=0
-if [[ "${ALL:-0}" == "1" ]]; then do_claude=1; do_codex=1; do_anti=1;
-elif [[ "$explicit" == "1" ]]; then want claude && do_claude=1; want codex && do_codex=1; want antigravity && do_anti=1;
-else do_claude=$det_claude; do_codex=$det_codex; do_anti=$det_anti; fi
-
-echo "== FixMyVibe installer ==  (HOME: $HOME_DIR)"
-echo "detected -> Claude:$det_claude Codex:$det_codex Antigravity:$det_anti"
-
-if [[ "$do_claude" == "1" ]]; then
-  d="$HOME_DIR/.claude/skills/$SKILL_NAME"; copy_skill "$d"
-  write_command "$HOME_DIR/.claude/commands/$SKILL_NAME.md" "$d"
-  echo "[Claude] skill -> $d ; command -> /$SKILL_NAME"; installed+=("Claude (/fixmyvibe)")
-fi
-if [[ "$do_codex" == "1" ]]; then
-  d="$HOME_DIR/.codex/skills/$SKILL_NAME"; copy_skill "$d"
-  write_command "$HOME_DIR/.codex/prompts/$SKILL_NAME.md" "$d"       # prompts/<name>.md -> /<name>
-  add_agents_block "$HOME_DIR/.codex/AGENTS.md" "$d"
-  echo "[Codex]  skill -> $d ; command -> /$SKILL_NAME (prompts) ; AGENTS.md updated"; installed+=("Codex (/fixmyvibe)")
-fi
-if [[ "$do_anti" == "1" ]]; then
-  base="$HOME_DIR/.gemini"; [[ -d "$HOME_DIR/.antigravity" ]] && base="$HOME_DIR/.antigravity"
-  d="$base/skills/$SKILL_NAME"; copy_skill "$d"
-  write_command "$base/workflows/$SKILL_NAME.md" "$d"                # global workflow -> /<name>
-  add_agents_block "$HOME_DIR/.gemini/AGENTS.md" "$d"
-  echo "[Antigravity] skill -> $d ; workflow -> /$SKILL_NAME ; ~/.gemini/AGENTS.md updated"
-  echo "  note: if /$SKILL_NAME does not appear, import $base/workflows/$SKILL_NAME.md via the '+ Global' workflow button."
-  installed+=("Antigravity (/fixmyvibe)")
+# Older installers wrote to paths the agents no longer read, plus an always-on AGENTS.md block.
+legacy=()
+for p in .codex/skills/fixmyvibe .gemini/skills/fixmyvibe .antigravity/skills/fixmyvibe .claude/commands/fixmyvibe.md \
+         .codex/prompts/fixmyvibe.md .gemini/workflows/fixmyvibe.md .antigravity/workflows/fixmyvibe.md; do
+  [[ -e "$HOME_DIR/$p" ]] && legacy+=("$HOME_DIR/$p")
+done
+blocks=()
+for p in .codex/AGENTS.md .gemini/AGENTS.md; do
+  grep -qF '<!-- fixmyvibe:managed -->' "$HOME_DIR/$p" 2>/dev/null && blocks+=("$HOME_DIR/$p")
+done
+if [[ ${#legacy[@]} -gt 0 || ${#blocks[@]} -gt 0 ]]; then
+  if [[ "${REMOVE_LEGACY:-0}" == 1 ]]; then
+    for p in ${legacy[@]+"${legacy[@]}"}; do rm -rf "$p"; echo "removed   $p"; done
+    for f in ${blocks[@]+"${blocks[@]}"}; do
+      awk '/<!-- fixmyvibe:managed -->/ { skip = 1 } !skip { print } /<!-- \/fixmyvibe:managed -->/ { skip = 0 }' "$f" > "$f.fixmyvibe.tmp"
+      mv "$f.fixmyvibe.tmp" "$f"; echo "cleaned   $f (removed the FixMyVibe block)"
+    done
+  else
+    echo 'Found files from an older FixMyVibe install that agents no longer read:'
+    for p in ${legacy[@]+"${legacy[@]}"} ${blocks[@]+"${blocks[@]}"}; do echo "  $p"; done
+    echo 'Run again with REMOVE_LEGACY=1 to remove them.'
+  fi
 fi
 
 echo '----------------------------------------'
-if [[ ${#installed[@]} -eq 0 ]]; then
-  echo "No agents installed. None detected - re-run with ALL=1 or AGENTS=\"claude codex antigravity\"."
-else
-  printf 'Installed into: %s\n' "$(IFS=', '; echo "${installed[*]}")"
-  echo 'Open a fresh agent session and type /fixmyvibe to use it.'
+if [[ ${#used[@]} -eq 0 ]]; then
+  echo 'Nothing installed. No agent was detected. Run again with ALL=1, or set AGENTS="claude agents antigravity".'
+  exit 1
 fi
+echo 'Open a new agent session, then use:'
+for u in "${used[@]}"; do echo "  $u"; done
+echo 'To make the audit run after every edit and before the agent stops, see adapters/ in the installed folder.'

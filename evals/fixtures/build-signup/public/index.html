@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pondlog: field notes from one small pond</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="page">
+    <header class="masthead">
+      <h1>Pondlog</h1>
+      <p>Field notes from one small pond, written the day they happen.</p>
+    </header>
+
+    <section aria-labelledby="notes-heading">
+      <h2 id="notes-heading" hidden>Latest notes</h2>
+      <p id="notes-status" class="status" role="status">Loading notes.</p>
+      <div id="notes"></div>
+    </section>
+  </main>
+
+  <script>
+    const list = document.getElementById('notes');
+    const status = document.getElementById('notes-status');
+
+    function showStatus(text, kind) {
+      status.textContent = text;
+      status.dataset.kind = kind || '';
+      status.hidden = !text;
+    }
+
+    fetch('/api/posts')
+      .then((res) => { if (!res.ok) throw new Error('Request failed'); return res.json(); })
+      .then(({ posts }) => {
+        if (posts.length === 0) { showStatus('No notes yet. The first one is on its way.'); return; }
+        showStatus('');
+        for (const post of posts) {
+          const article = document.createElement('article');
+          article.className = 'note';
+          const title = document.createElement('h2');
+          title.textContent = post.title;
+          const time = document.createElement('time');
+          time.textContent = post.created_at;
+          const body = document.createElement('p');
+          body.textContent = post.body;
+          article.append(title, time, body);
+          list.append(article);
+        }
+      })
+      .catch(() => showStatus('The notes could not be loaded. Reload the page to try again.', 'error'));
+  </script>
+</body>
+</html>

@@ -1,101 +1,73 @@
-# FINISH-GATE — verify before you claim done
+# Finish gate
 
-The single rule that makes this skill real: **you may not report success until this gate passes,
-run fresh.** Not remembered results — run them *now*. A model's instinct is to declare victory on
-the happy path; this gate is the discipline that overrides that instinct. It pairs directly with
-Perpetua's Stop-guard: while the gate is red, the mission's Definition of Done is unmet.
+Run this before you report on standard work and above. Every item needs evidence from this turn.
+An item you cannot answer is a failure, not a pass. Fix it, then run the whole gate again.
 
-> If any item is ❌ or "unsure", the task is **NOT DONE**. Log the specific failure, make it the
-> next action, fix it, and re-run the *entire* gate. Never report success on a red gate. Never
-> soften a ❌ into a "mostly done."
+## Gate 0: scope and tier
+- [ ] The change does what was asked and nothing more.
+- [ ] The tier is stated. For sensitive or critical work, the trust boundaries and the top abuse
+      cases are written down (`RISK-PROFILES.md`).
 
----
+## Gate 1: it runs
+- [ ] The code ran this turn.
+- [ ] Tests for the new behavior exist, with one edge case and one failure case, and pass now.
+- [ ] Lint, format, and type checks pass where the project has them. No check was silenced to
+      get there.
 
-## Gate 0 — Scope, honesty & scored self-critique
-- [ ] I did exactly what was asked — no silent scope creep, no unrequested features.
-- [ ] I can state what I ran and what passed. Anything unverified is labeled unverified.
-- [ ] I selected the risk tier and every applicable profile from `RISK-PROFILES.md`; for sensitive
-      or critical work I recorded trust boundaries and top abuse cases.
-- [ ] I scored the work with `SELF-CRITIQUE.md`; **every applicable axis is ≥4** (security,
-      correctness, maintainability, honesty plus applicable design/content/AI-system axes);
-      no axis averaged away; scores stamped where the work lives.
+## Gate 2: the audit
+- [ ] `bin/fixmyvibe-audit` ran with `--changed` and exited 0.
+- [ ] Every warning is fixed or has a stated reason. Every suppression has a real reason.
+- [ ] Exit 2 or `NOTHING SCANNED` was treated as a failure.
 
-## Gate 1 — It actually runs (evidence, not vibes)
-- [ ] I executed the code this session; it runs.
-- [ ] Tests exist for the new behavior (incl. ≥1 edge case + ≥1 failure case) and **pass now**.
-- [ ] Lint/format/typecheck (if the project has them) pass.
+## Gate 3: security, by hand (the audit cannot see these)
+- [ ] Every endpoint and query authorizes the caller. Tested as a second user where it matters.
+- [ ] Every external input is validated on the server.
+- [ ] Every new dependency was confirmed to exist and to be needed.
+- [ ] No destructive operation runs without a backup and human approval.
+- [ ] For sensitive and critical work, the checks chosen from `SECURITY-VERIFICATION.md` ran.
+      A check that could not run is reported as not run.
 
-## Gate 2 — Security scan (against FORBIDDEN-PATTERNS §A)
-- [ ] No secret in source, client bundle, or logs (grepped the diff).
-- [ ] Every query parameterized; no injection sink on untrusted input.
-- [ ] Every endpoint/query authorizes the caller; tested that user A can't touch user B's data.
-- [ ] Every external input validated + sanitized server-side.
-- [ ] Every new dependency verified to exist, be correct, and be necessary.
-- [ ] No destructive/data-losing operation runs without backup + human approval (Perpetua guardrail).
-- [ ] I selected and ran risk-appropriate layers from `SECURITY-VERIFICATION.md`; scanner errors or
-      skipped required checks are failures, not clean results.
-- [ ] For sensitive/critical changes, confirmed findings have regression tests and residual risk has
-      an owner, reason, and verification or review path.
+## Gate 4: correctness
+- [ ] Unhappy paths are handled: empty, invalid, error, timeout, unauthorized, duplicate.
+- [ ] Resources are bounded: pagination, caps, timeouts.
+- [ ] Every call and import resolves to something real.
+- [ ] Nothing dead, duplicated, or stubbed is left behind without being named in the report.
 
-## Gate 3 — Robustness (against FORBIDDEN-PATTERNS §B)
-- [ ] No swallowed errors; unhappy paths handled (null/empty/error/unauthorized/zero).
-- [ ] Resources bounded (pagination, caps, timeouts, no N+1).
-- [ ] No fabricated APIs; every call/import resolves to something real.
-- [ ] No dead/duplicated code left; reused existing patterns/utilities.
+## Gate 5: interface (only if UI changed)
+- [ ] Every state the view can reach exists: empty, loading, error, success, zero results.
+- [ ] Keyboard path walked. Focus is visible and not hidden behind sticky elements.
+- [ ] Contrast meets WCAG AA. Inputs have labels, images have alt text, controls have names.
+- [ ] No horizontal scroll at 320px. Works at 200% zoom. Reduced motion is honored.
+- [ ] With the logo removed, the page could not be mistaken for a generator default.
+- [ ] Values come from tokens.
 
-## Gate 4 — Design (only if UI was produced; against FORBIDDEN-PATTERNS §C & §D)
-- [ ] **Logo test:** with branding stripped, this is *not* mistakable for a v0/Lovable default.
-- [ ] No un-justified slop tell (Inter-only, purple gradient, canned hero+3-cards, uniform
-      rounded-2xl/shadow, untouched shadcn, glassmorphism blob, stock photo, filler copy).
-- [ ] Components read from shared design tokens; it reads as one intentional system.
-- [ ] Every state present: empty / loading / error / success / zero-results; forms give feedback.
-- [ ] Accessibility: semantic HTML, WCAG AA contrast, keyboard-operable, visible focus, labels/alt,
-      reduced-motion honored.
-- [ ] Responsive: no body horizontal scroll; works at mobile/tablet/desktop.
-- [ ] WCAG 2.2 checks include unobscured focus, zoom/reflow, target size, error identification, and
-      accessible authentication where applicable; keyboard path was checked manually.
+## Gate 6: copy (only if user-facing text changed)
+- [ ] Every metric, customer, testimonial, and capability claim is real and checked.
+- [ ] Errors say what happened, what is safe, and what to do next.
+- [ ] Destructive actions name their consequence on the button.
 
-## Gate 4B — Content (only if user-facing prose was produced)
-- [ ] Every metric, customer, testimonial, integration, citation, and capability claim is verified.
-- [ ] Copy names the real product behavior, audience, action, and consequence; no filler or fake urgency.
-- [ ] Errors and destructive actions say what happened, what remains safe, and what the user can do.
-- [ ] I ran the read-aloud and product-specificity checks in `CONTENT-CRAFT.md`.
+## Gate 7: AI features (only if a model, retrieval, or agent tool is involved)
+- [ ] Model and retrieved output is treated as untrusted and cannot grant permission.
+- [ ] Tools have least privilege, validated arguments, limits, and confirmation for
+      consequential actions.
+- [ ] An evaluation set with thresholds decided in advance was run (`AI-SYSTEMS.md`).
 
-## Gate 4C — AI systems (only if models, retrieval, embeddings, or agent tools are involved)
-- [ ] Model/retrieved/tool output is untrusted and cannot grant permission or flow raw into a sink.
-- [ ] Tools use least privilege, typed/validated arguments, bounds, audit logs, and fresh confirmation
-      for consequential actions.
-- [ ] Tenant isolation, privacy, retention, prompt injection, failure, cost, and recovery were tested.
-- [ ] Versioned evaluations passed predeclared thresholds; model/prompt/data versions and limits recorded.
+## Passing
+All items pass: report in the format from `SKILL.md` section 4, naming what you ran and what you
+did not verify. Any item fails: you are not done. Make the failure the next task, fix it, and run
+the gate again. If you are blocked after two different approaches, give the user a focused
+description of the blocker instead of trying a third time.
 
-## Gate 5 — The maintainer test
-- [ ] A stranger (or you at 3am) could read this, understand *why*, and safely extend it.
-- [ ] Comments explain non-obvious *why*; the tree is clean.
+## Automating the mechanical part
 
----
-
-## Passing the gate
-- **All green** → report done **with evidence**: what you ran, what passed, and one line on each
-  deliberate ⚠️ you kept. If under Perpetua, mark the criterion/mission complete only now.
-- **Any red** → not done. Append the failure to the ledger/todos as the next task, fix it, re-run
-  the whole gate. Repeat until green or, if truly blocked past your breaker count, escalate a
-  focused blocker to the human (don't spin).
-
-### Minimal automatable slice (wire into CI / a script where possible)
 ```bash
-# 1) FixMyVibe's own executable gate — greps the diff for the security + slop blocklist, exits 1 on a blocker
-bash bin/fixmyvibe-audit.sh --staged            # or: pwsh bin/fixmyvibe-audit.ps1 -Staged
-# 2) the rest, adapted to the stack
-run tests            # Gate 1
-lint + typecheck     # Gate 1
-secret scan diff     # Gate 2 (gitleaks/trufflehog complements the audit's high-entropy grep)
-a11y check on UI     # Gate 4 (axe/pa11y/Lighthouse); visual-regression via Playwright if available
+bash bin/fixmyvibe-audit.sh --staged              # pre-commit: lines added in the index
+bash bin/fixmyvibe-audit.sh --since origin/main   # CI: lines added on this branch
+bash bin/fixmyvibe-audit.sh --format json src     # machine output, one finding per line
 ```
-`bin/fixmyvibe-audit.*` scans only added lines in staged mode. Exit 1 means a blocker (or a warning
-under strict mode); exit 2 means the scan failed and the gate is incomplete. The PowerShell edition
-also supports JSON output for CI. Obvious placeholder values are suppressed narrowly, but test and
-example files are not globally exempt because real credentials leak there too.
 
-This is a heuristic text scan, not a parser or a security verdict. It cannot prove authorization,
-safe data flow, dependency integrity, accessibility, content truth, or design quality. Use the risk
-profiles, stack-native tools, tests, and manual checks above.
+The PowerShell edition takes `-Staged`, `-Since origin/main`, and `-Format Json`. Agent hooks that
+run the audit after each edit and before the agent stops are described in `adapters/`.
+
+The audit is a heuristic text scan. It does not prove authorization, data flow, dependency
+integrity, accessibility, truthful copy, or design quality. Gates 3 to 7 exist because of that.

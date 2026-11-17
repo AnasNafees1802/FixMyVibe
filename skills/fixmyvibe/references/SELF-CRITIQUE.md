@@ -1,75 +1,78 @@
-# SELF-CRITIQUE & AUDIT MODE — score before you ship, or score someone else's build
+# Review method
 
-Two uses of the same rubric:
-- **Pre-emit self-critique** (during BUILD, Step 4 of the loop): score your own output *before*
-  handing it back; anything below the bar triggers revision — you do not emit until it clears.
-- **Audit mode** (verb `fixmyvibe audit <target>`): score an *existing* file/PR/page and return a
-  ranked punch list. **Diagnosis only — make no edits.** This is how the skill reviews vibe-coded
-  work without rewriting it.
+Use this in audit mode (reviewing existing work without editing it) and in review mode (your own
+pending diff). A model scoring its own work from 1 to 5 reports 4s and 5s, so this method does not
+use scores. A finding stands only if it survives an attempt to disprove it.
 
-Generalized from Hallmark's 6-axis design critique — but extended to cover **code** too, which no
-design skill does.
+## Step 1: collect candidates
 
----
+1. Run the audit on the target: `bash bin/fixmyvibe-audit.sh <path>` or
+   `fixmyvibe-audit.ps1 <path>`. Each BLOCKER and WARNING is a candidate, not yet a finding.
+2. Read the code for what a text scan cannot see. Work through the questions for each axis that
+   applies.
 
-## The scoring rubric (score each axis 1–5)
+| Axis | Questions |
+|---|---|
+| Security | Who can call this? What stops user A from reaching user B's data? Where does untrusted input enter, and what sink does it reach? |
+| Correctness | What happens on empty, invalid, huge, slow, or repeated input? Does every call resolve to a real API? |
+| Tests | Does a test fail when the behavior breaks? Is there a failure case? Was anything skipped or silenced? |
+| Maintainability | Does it match the project's conventions? Is anything duplicated, dead, or more general than its one use needs? |
+| Honesty | Does the work do what was asked, and is every stub or mock disclosed? |
+| Interface | Does every state exist? Can it be used by keyboard? Does it read as one system built on tokens? Would it pass for a generator default? |
+| Copy | Is every claim real? Could the sentence be pasted into a competitor's page unchanged? |
+| AI features | Can model or retrieved output reach a tool, a query, or a permission check unvalidated? |
 
-### Code axes
-1. **Security** — secrets out of code, authz enforced, inputs validated, no injection, deps verified.
-2. **Correctness** — unhappy paths handled, no fabricated APIs, resources bounded, runs + tests pass.
-3. **Maintainability** — matches repo conventions, reuses existing utils, simplest-that-works, no
-   dead/duplicated code, clean diff, `why` comments.
-4. **Honesty** — did exactly what was asked (no scope creep); done vs drafted stated truthfully.
+## Step 2: try to disprove each candidate
 
-### Design axes (only if UI is produced)
-5. **Hierarchy** — clear information priority; not uniform weight.
-6. **Specificity** — distinctive; passes the logo test; no accepted default without a reason.
-7. **Restraint** — no decoration/motion clutter; every element earns its place.
-8. **Craft & completeness** — tokens, all states, accessibility (WCAG AA, keyboard, focus),
-   responsive; real content, not filler/fake proof.
+Start from the position that the candidate is wrong. Keep it only if you can state all three:
 
-### Content axis (if user-facing prose is produced)
-9. **Truth & usefulness** — claims verified; specific to the product and audience; action and
-   consequence clear; no generated filler, fake proof, or hidden limitation.
+- **Location:** `file:line`.
+- **Trigger:** the specific input, user, or sequence that makes it fail.
+- **Consequence:** what an attacker gains or what a user loses.
 
-### AI-system axis (if models, retrieval, embeddings, or agent tools are involved)
-10. **Bounded agency & evaluation** — model output treated as untrusted; permissions enforced in
-    code; side effects bounded and confirmable; privacy handled; risk-based evaluations pass.
+If you cannot trace the path from the trigger to the consequence, drop it or list it under
+"could not confirm". Report nothing you are less than about 80 percent sure of as a confirmed
+finding.
 
-## The bar
-- **Every applicable axis must be ≥ 4** to emit (or to call a task done). Any axis **≤ 3** → name the
-  specific weakness, fix it, re-score. Do not average away a low axis with high ones.
-- **Any hard-blocklist hit** (`FORBIDDEN-PATTERNS.md §A` security, or an un-justified §C slop tell)
-  is an automatic fail regardless of scores.
+Not findings: style preferences the project does not share, missing features nobody asked for,
+theoretical issues with no reachable trigger, and anything in generated or vendored files.
 
-## Stamp the scores (accountability beats good intentions)
-Record the critique where the work lives, so choices are visible and revisable:
-- Code: a short PR/commit note or a comment block — e.g.
-  `// fixmyvibe: sec5 correct5 maint4 honest5 — ran tests(12/12), authz tested as 2nd user`.
-- UI: a CSS comment stamp — e.g.
-  `/* fixmyvibe: direction=Terminal-Core macro=Stat-Led | hier5 spec4 restraint5 craft4 */`.
+## Step 3: rank
 
-Hiding your choices is what makes templated, happy-path output feel inevitable. Stating them keeps a
-human able to challenge them.
+- **Blocker:** a reachable path to unauthorized access, code execution, secret exposure, or data
+  loss; a claim of done for work that does not run; a user who cannot complete the task.
+- **Major:** broken behavior or a missing control with real user impact.
+- **Minor:** maintainability or polish.
 
----
+Rank by impact on a real user, not by which rule matched.
 
-## Audit-mode output format
-When invoked as `audit`, return this — and nothing that edits the target:
+## Output format (audit mode)
 
 ```
-FixMyVibe audit — <target>
-Risk: <routine|sensitive|critical> · Profiles: <selected profiles>
-Scores: security X/5 · correctness X/5 · maintainability X/5 · honesty X/5
-        [hierarchy X/5 · specificity X/5 · restraint X/5 · craft X/5]   ← if UI
-        [truth/usefulness X/5] [bounded agency/evaluation X/5]          ← when applicable
-Verdict: PASS (all ≥4, no blocklist hit) | FAIL
+FixMyVibe audit: src/api
+Tier: sensitive. Profiles: web API.
+Ran: fixmyvibe-audit src/api (2 blockers, 5 warnings), read 14 files.
 
-Punch list (highest impact first):
-1. [BLOCKER][security] Supabase service key hardcoded at src/api.ts:14 → move to server env.
-2. [BLOCKER][slop] Inter-only + purple gradient hero → pick a direction (DESIGN-DIRECTIONS.md).
-3. [major][correctness] No error/empty state on the results view → add both.
-4. [minor][maintainability] Duplicate formatDate() at utils.ts:9 and helpers.ts:22 → dedupe.
+Findings
+1. [blocker][security] src/api/orders.ts:41. GET /orders/:id returns any order by id.
+   Trigger: a signed-in user requests another user's order id.
+   Consequence: every order is readable by every account.
+   Fix: filter by the session's user id in the query.
+2. [major][correctness] src/api/upload.ts:18. No size limit on the upload body.
+   Trigger: a 5 GB request. Consequence: the process runs out of memory.
+   Fix: cap the body and reject with 413.
+3. [minor][maintainability] formatDate exists in utils.ts:9 and helpers.ts:22. Keep one.
+
+Could not confirm
+- SEC201 at src/ui/Preview.tsx:12 (raw HTML sink). The source of `html` is outside the files reviewed.
+
+Not reviewed: deployment configuration, dependency advisories.
 ```
-Rank BLOCKER (blocklist hit) > major (axis ≤3) > minor (polish). Cite `file:line`. Recommend the
-fix; let the human decide when to apply it. Applying fixes is a separate, explicit action.
+
+Recommend fixes; do not apply them. Applying fixes is a separate request.
+
+## Review mode
+
+Run the same three steps on your own diff, then fix what stands. Review the diff as if someone
+else wrote it: read what is there, not what you meant to write. Where the harness offers a
+subagent with fresh context, hand it the diff and this file, and treat its findings as candidates.

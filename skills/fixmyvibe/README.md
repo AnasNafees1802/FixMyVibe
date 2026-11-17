@@ -1,70 +1,52 @@
-# FixMyVibe
+# FixMyVibe (skill folder)
 
-FixMyVibe is a portable craft and release-gate skill for AI coding agents. It reviews four connected
-surfaces: code, interface, user-facing content, and AI-enabled features. The agent must inspect the
-project first, apply the relevant risk profile, and show fresh evidence before claiming completion.
+This folder is the installable skill. The project overview, measured results, and comparison with
+other skills are in the repository's top-level `README.md`.
 
-The full public overview, comparison, install options, and audit examples are in
-[`../../README.md`](../../README.md).
+| Path | What it is |
+|---|---|
+| `SKILL.md` | The instructions an agent loads: size the work, the loop, the audit, the report format |
+| `references/` | Detail the agent loads on demand: code, UI, design directions, copy, AI features, risk profiles, the finish gate, the review method, the pattern catalog |
+| `bin/fixmyvibe-audit.sh`, `bin/fixmyvibe-audit.ps1` | The audit, in two editions that report the same findings |
+| `bin/rules.conf` | The rule pack both editions read |
+| `adapters/` | Per-agent install notes and hook configuration |
+| `install.ps1`, `install.sh` | Copy this folder to where each agent looks for skills |
 
-## Why it exists
+## Use the audit on its own
 
-A polished result can still hide missing authorization, unsafe output handling, fabricated proof,
-inaccessible controls, or untested failure paths. FixMyVibe converts those predictable failures into
-an operating loop:
-
-1. Read the repository and identify its existing conventions.
-2. Classify the risk and select only the relevant references.
-3. Build or review the work across every affected surface.
-4. Run the finish gate and report both evidence and limitations.
-
-The bundled audit is a fast heuristic layer. It does not replace stack-native testing, security
-analysis, accessibility checks, threat modeling, or qualified human review.
-
-## Quick start from this folder
-
-```powershell
-./install.ps1
-```
+The audit needs only bash with grep and awk, or PowerShell 5.1 or later. It has no other dependency.
 
 ```bash
-./install.sh
+bash bin/fixmyvibe-audit.sh --changed          # lines added since the last commit, plus new files
+bash bin/fixmyvibe-audit.sh src                # whole files under src
+bash bin/fixmyvibe-audit.sh --staged           # for a pre-commit hook
+bash bin/fixmyvibe-audit.sh --since origin/main --format json   # for CI
 ```
 
-The installer copies the skill to detected Claude Code, Codex, and Antigravity locations and
-registers `/fixmyvibe`. Cursor and Gemini have manual adapters. See [`INSTALL.md`](INSTALL.md) for
-the complete matrix and pinned-install guidance.
-
-After opening a fresh agent session:
-
-```text
-/fixmyvibe <task>
-/fixmyvibe audit <path>
-/fixmyvibe review
+```powershell
+./bin/fixmyvibe-audit.ps1 -Changed
+./bin/fixmyvibe-audit.ps1 src
+./bin/fixmyvibe-audit.ps1 -Staged
+./bin/fixmyvibe-audit.ps1 -Since origin/main -Format Json
 ```
 
-## Package map
+Exit codes: 0 no blockers, 1 blockers (or warnings with `--strict-warnings`), 2 the scan did not
+complete.
 
-```text
-fixmyvibe/
-|-- SKILL.md                     Entry point and operating loop
-|-- INSTALL.md                   Installation and update guide
-|-- command.md                   Slash-command template
-|-- install.ps1 / install.sh     Cross-agent installers
-|-- bin/                         PowerShell and shell audit gates
-|-- adapters/                    Agent-specific integration files
-`-- references/
-    |-- CODE-CRAFT.md            Security, correctness, maintainability, and honesty
-    |-- RISK-PROFILES.md         Risk tiers and system profiles
-    |-- SECURITY-VERIFICATION.md Evidence selection and finding discipline
-    |-- UI-CRAFT.md              Design method, component states, and accessibility
-    |-- CONTENT-CRAFT.md         Write, edit, and detect modes
-    |-- AI-SYSTEMS.md            Model, retrieval, privacy, tool, and evaluation safety
-    |-- DESIGN-DIRECTIONS.md     Context-driven visual decisions
-    |-- SELF-CRITIQUE.md         Scored review rubric
-    |-- FORBIDDEN-PATTERNS.md    Blocking failures and contextual signals
-    `-- FINISH-GATE.md           Evidence required before completion
-```
+## Tune it for a project
 
-The contract is simple: **read before you write, refuse the average, and verify before you claim
-done.**
+- **One line:** append `fixmyvibe: allow RULE-ID reason` in a comment on the line. The reason is
+  required, and the suppression is listed in every report.
+- **Paths and rules:** a `.fixmyvibeignore` file in the project root takes one path glob per line,
+  and `rule:RULE-ID` lines to turn a rule off. The audit lists what is disabled, and flags a change
+  to this file for review. A person should own it, not the agent.
+- **Your own rules:** `--rules FILE` (or `-Rules FILE`) loads another rule pack in the format
+  documented at the top of `bin/rules.conf`.
+
+## Limits
+
+The audit matches text, one line at a time. It finds a useful share of leaked secrets, injection
+shapes, swallowed errors, placeholder code, accessibility slips, and generic UI and copy. It cannot
+see authorization, business logic, data flow across files, or whether a design is good. A clean
+result is not a security verdict. Full scans in the PowerShell edition are about three times slower
+than the shell edition; the diff modes are fast in both.

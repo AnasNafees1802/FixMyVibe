@@ -1,0 +1,530 @@
+# Labeled corpus for the audit rule pack. Both engines must agree with every row.
+# Row format:  expect | RULE-ID | file extension | one line of file content
+#   expect is hit (the rule must fire on this line) or miss (it must not).
+#   \n inside the content becomes a real newline, so two-line cases fit on one row.
+#   {+} is removed before the file is written, so realistic token shapes never sit in the repo
+#   in a form a secret scanner would block.
+# tests/run.sh and tests/run.ps1 require at least one hit and one miss for every rule id.
+
+hit  | SEC001 | js   | const client = new OpenAI({ apiKey: "sk-{+}AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd" });
+hit  | SEC001 | py   | stripe.api_key = "sk_li{+}ve_4eC39HqLyjWDarjtT1zdp7dc"
+hit  | SEC001 | env  | AWS_ACCESS_KEY_ID=AKIA{+}IOSFODNN7ABCDEFG
+hit  | SEC001 | yml  | token: ghp_{+}aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789
+hit  | SEC001 | ts   | const anthropic = "sk-ant-{+}api03-AbCdEfGhIjKlMnOpQrStUv";
+miss | SEC001 | css  | .sk-spinner-fading-circle-wrapper-element { display: block; }
+miss | SEC001 | md   | Use the documented sample key AKIAIOSFODNN7EXAMPLE in the tutorial.
+miss | SEC001 | js   | const taskId = "task-0123456789abcdef0123456789abcdef";
+
+hit  | SEC002 | pem  | -----BEGIN RSA PRIV{+}ATE KEY-----
+hit  | SEC002 | js   | const key = "-----BEGIN PRIV{+}ATE KEY-----\\nMIIEvQIBADANBg";
+miss | SEC002 | pem  | -----BEGIN PUBLIC KEY-----
+
+hit  | SEC003 | js   | const apiKey = "A1b2C3d4E5f6G7h8";
+hit  | SEC003 | json | "password": "S3cure!Passw0rd",
+hit  | SEC003 | py   | DB_PASSWORD = 'hunter2hunter2'
+hit  | SEC003 | rb   | client_secret: "9f8e7d6c5b4a39281706"
+miss | SEC003 | ts   | const errors = { password: "Password is required" };
+miss | SEC003 | ts   | const labels = { password: "Required" };
+miss | SEC003 | py   | api_key = "replace_me"
+miss | SEC003 | js   | const fixture = { token: "test-token-12345" };
+miss | SEC003 | js   | const apiKey = process.env.API_KEY;
+miss | SEC003 | js   | const password = "${DB_PASSWORD}";
+miss | SEC003 | ts   | const passwordHash = await hash(input);
+
+hit  | SEC004 | py   | DATABASE_URL = "postgres://admin:Sup3rS3cret@db.internal.io:5432/app"
+hit  | SEC004 | yml  | url: amqp://svc:q7Wm2pLx@queue.prod.internal/vhost
+miss | SEC004 | md   | Set it to postgres://user:password@localhost:5432/db first.
+miss | SEC004 | js   | const url = `mongodb://${USER}:${PASS}@host/db`;
+miss | SEC004 | yml  | url: redis://default:devpass1@localhost:6379
+miss | SEC004 | js   | const site = "https://docs.example.dev/guide:intro";
+
+hit  | SEC005 | yml  |   POSTGRES_PASSWORD: s3cr3tValue99
+hit  | SEC005 | env  | API_KEY=9f8e7d6c5b4a3210
+miss | SEC005 | yml  |   existingSecret: my-secret-name
+miss | SEC005 | yml  |   password: ${DB_PASSWORD}
+miss | SEC005 | env  | API_KEY=your_api_key_here
+miss | SEC005 | js   | const password = getPassword99();
+
+hit  | SEC007 | js   | const secret = process.env.JWT_SECRET || "dev-secret-change-me";
+hit  | SEC007 | ts   | const key = process.env["API_KEY"] ?? "abc123fallback";
+hit  | SEC007 | py   | API_KEY = os.getenv("API_KEY", "abc123fallbackvalue")
+hit  | SEC007 | py   | secret = os.environ.get("SESSION_SECRET", "not-so-secret")
+miss | SEC007 | js   | const port = process.env.PORT || "3000";
+miss | SEC007 | js   | const key = process.env.API_KEY || "";
+miss | SEC007 | py   | region = os.getenv("AWS_REGION", "us-east-1")
+
+hit  | SEC008 | env  | NEXT_PUBLIC_OPENAI_API_KEY=abc
+hit  | SEC008 | ts   | const k = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
+hit  | SEC008 | ts   | const s = import.meta.env.VITE_STRIPE_SECRET_KEY;
+miss | SEC008 | ts   | const k = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+miss | SEC008 | env  | NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_abc
+miss | SEC008 | ts   | const k = process.env.OPENAI_API_KEY;
+
+hit  | SEC009 | ts   | const openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
+miss | SEC009 | ts   | const openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: false });
+
+hit  | SEC010 | js   | const key = "eyJ{+}hbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ{+}zdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV";
+miss | SEC010 | js   | const prefix = "eyJ";
+
+hit  | SEC101 | js   | const q = `SELECT * FROM users WHERE id = ${id}`;
+hit  | SEC101 | ts   | await db.query(`DELETE FROM sessions WHERE token = '${t}'`);
+hit  | SEC101 | js   | const sql = `insert into logs (msg) values ('${msg}')`;
+hit  | SEC101 | js   |   await pool.query(`UPDATE ${table} SET ${sets} WHERE id = $1`, [id]);
+miss | SEC101 | ts   | const rows = await sql`SELECT * FROM users WHERE id = ${id}`;
+miss | SEC101 | js   | logger.info(`Failed to delete from cache ${key}`);
+miss | SEC101 | js   | const msg = `Please select an option from the menu: ${name}`;
+miss | SEC101 | js   | const q = `SELECT * FROM users WHERE id = $1`;
+
+hit  | SEC102 | js   | db.query("SELECT * FROM users WHERE name = '" + name + "'");
+hit  | SEC102 | java | String q = "SELECT id FROM accounts WHERE owner = " + ownerId;
+hit  | SEC102 | py   | cur.execute('SELECT * FROM users WHERE id = ' + user_id)
+hit  | SEC102 | php  | $r = mysqli_query($c, "SELECT * FROM users WHERE id = $id");
+miss | SEC102 | js   | db.query("SELECT * FROM users WHERE id = $1", [id]);
+miss | SEC102 | js   | const label = "Select a plan from the list" + suffix;
+
+hit  | SEC103 | py   | cur.execute(f"SELECT * FROM users WHERE name = '{name}'")
+hit  | SEC103 | py   | q = "SELECT * FROM t WHERE id = %s" % uid
+hit  | SEC103 | py   | q = "DELETE FROM t WHERE id = {}".format(uid)
+miss | SEC103 | py   | cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+miss | SEC103 | py   | log.info(f"selected {count} rows from the cache")
+hit  | SEC103 | py   |      "VALUES ('%(name)s')" % {'name': name})
+hit  | SEC103 | py   |     f"WHERE email = '{email}'"
+miss | SEC103 | py   |              'VALUES (%(title)s, %(description)s)')
+miss | SEC103 | py   | log.error("Could not set %s" % name)
+
+hit  | SEC109 | js   |     WHERE id = ${id}
+hit  | SEC109 | ts   |   VALUES (${name}, ${email})
+miss | SEC109 | ts   | const rows = await sql`SELECT * FROM t WHERE id = ${id}`;
+miss | SEC109 | js   |     WHERE id = $1
+
+hit  | SEC104 | js   | const r = eval(userInput);
+hit  | SEC104 | js   | const fn = new Function("return " + code);
+hit  | SEC104 | py   | os.system("rm -rf " + path)
+hit  | SEC104 | js   | exec(`git clone ${url}`);
+hit  | SEC104 | py   | exec(code)
+miss | SEC104 | py   | model.eval()
+miss | SEC104 | py   | value = ast.literal_eval(text)
+miss | SEC104 | js   | const m = pattern.exec(input);
+miss | SEC104 | js   | const href = await page.$eval("a", (el) => el.href);
+miss | SEC104 | js   | var xss = 'javascript:eval(document.body.innerHTML)';
+
+hit  | SEC108 | py   | subprocess.run(cmd, shell=True)
+hit  | SEC108 | py   | subprocess.call(f"ls {directory}", shell=True)
+miss | SEC108 | py   | subprocess.run(["ls", "-l"], check=True)
+miss | SEC108 | py   | subprocess.run("ls -l", shell=True)
+
+hit  | SEC105 | py   | r = requests.get(url, verify=False)
+hit  | SEC105 | js   | const agent = new https.Agent({ rejectUnauthorized: false });
+hit  | SEC105 | js   | process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+hit  | SEC105 | go   | tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+miss | SEC105 | py   | r = requests.get(url, verify=True)
+miss | SEC105 | js   | const agent = new https.Agent({ rejectUnauthorized: true });
+
+hit  | SEC106 | py   | digest = hashlib.md5(password.encode()).hexdigest()
+hit  | SEC106 | js   | const h = crypto.createHash("sha1").update(password).digest("hex");
+miss | SEC106 | js   | const h = crypto.createHash("sha256").update(password).digest("hex");
+miss | SEC106 | js   | const etag = md5(fileBuffer);
+
+hit  | SEC107 | py   | data = jwt.decode(token, options={"verify_signature": False})
+hit  | SEC107 | js   | jwt.verify(token, key, { algorithms: ["none"] });
+miss | SEC107 | js   | jwt.verify(token, key, { algorithms: ["HS256"] });
+
+hit  | SEC201 | js   | el.innerHTML = userHtml;
+hit  | SEC201 | jsx  | <div dangerouslySetInnerHTML={{ __html: html }} />
+hit  | SEC201 | vue  | <p v-html="message"></p>
+miss | SEC201 | js   | el.innerHTML = "";
+miss | SEC201 | js   | el.textContent = name;
+miss | SEC201 | js   | if (el.innerHTML === expected) { done(); }
+
+hit  | SEC202 | py   | data = pickle.loads(blob)
+hit  | SEC202 | py   | cfg = yaml.load(stream)
+miss | SEC202 | py   | cfg = yaml.load(stream, Loader=yaml.SafeLoader)
+miss | SEC202 | py   | cfg = yaml.safe_load(stream)
+
+hit  | SEC203 | js   | app.use(cors());
+hit  | SEC203 | js   | res.setHeader("Access-Control-Allow-Origin", "*");
+hit  | SEC203 | py   | app.add_middleware(CORSMiddleware, allow_origins=["*"])
+miss | SEC203 | js   | app.use(cors({ origin: allowedOrigins }));
+
+hit  | SEC204 | py   | app.run(debug=True)
+hit  | SEC204 | env  | DEBUG=True
+miss | SEC204 | py   | app.run(debug=False)
+miss | SEC204 | js   | const debug = true;
+
+hit  | SEC205 | js   | localStorage.setItem("authToken", token);
+miss | SEC205 | js   | localStorage.setItem("theme", "dark");
+
+hit  | SEC206 | js   | const resetToken = Math.random().toString(36).slice(2);
+hit  | SEC206 | py   | otp = random.randint(100000, 999999)
+miss | SEC206 | js   | const jitter = Math.random() * 100;
+
+hit  | SEC207 | yml  |         run: echo "${{ github.event.issue.title }}"
+hit  | SEC207 | yml  |         run: git checkout ${{ github.head_ref }}
+miss | SEC207 | yml  |           TITLE: ${{ github.event.issue.title }}
+miss | SEC207 | yml  |         run: echo "${{ github.sha }}"
+hit  | SEC207 | yml  |           echo "${{ github.event.pull_request.title }}"
+miss | SEC207 | yml  |   group: ci-${{ github.head_ref }}
+
+hit  | DEP001 | yml  |       - uses: actions/checkout@main
+hit  | DEP001 | dockerfile | FROM node:latest
+hit  | DEP001 | json |     "express": "latest",
+miss | DEP001 | yml  |       - uses: actions/checkout@v4
+miss | DEP001 | dockerfile | FROM node:22.11-alpine
+miss | DEP001 | json |     "express": "^4.21.0",
+
+hit  | DEP002 | sh   | curl -fsSL https://get.tool.dev/install.sh | sh
+hit  | DEP002 | dockerfile | RUN wget -qO- https://get.tool.dev/setup | sudo bash
+miss | DEP002 | sh   | curl -fsSL https://get.tool.dev/file -o file.tar.gz
+
+hit  | COR001 | js   | try { run(); } catch (e) {}
+hit  | COR001 | js   | } catch (err) {\n}
+hit  | COR001 | ts   | } catch {\n}
+hit  | COR001 | py   | except Exception:\n    pass
+hit  | COR001 | py   | except: pass
+hit  | COR001 | js   | promise.catch(() => {});
+hit  | COR001 | go   | if err != nil {\n}
+miss | COR001 | py   | except ImportError:\n    pass
+miss | COR001 | js   | try { run(); } catch (e) { log.error(e); }
+miss | COR001 | js   | function noop() {\n}
+
+hit  | COR002 | js   |   debugger;
+hit  | COR002 | py   |     breakpoint()
+miss | COR002 | js   | const debuggerEnabled = false;
+
+hit  | COR003 | py   | r = requests.get(url)
+miss | COR003 | py   | r = requests.get(url, timeout=10)
+
+hit  | COR004 | sql  | DROP TABLE users;
+hit  | COR004 | sql  | DELETE FROM sessions;
+miss | COR004 | sql  | DELETE FROM sessions WHERE expires_at < now();
+
+hit  | HON001 | js   |   // ... rest of the code remains the same
+hit  | HON001 | js   |   // ... existing code ...
+hit  | HON001 | py   |     # rest of the implementation
+hit  | HON001 | js   |   // ...
+hit  | HON001 | html | <!-- ... other sections ... -->
+miss | HON001 | js   | // Rest parameters collect the remaining args
+miss | HON001 | py   | # the rest api client
+miss | HON001 | js   | const all = [...rest];
+
+hit  | HON002 | js   | // In a real app, you would call the payment API here
+hit  | HON002 | py   |     raise NotImplementedError("TODO: implement refunds")
+miss | HON002 | py   |     raise NotImplementedError
+hit  | HON002 | js   | // TODO: implement validation
+hit  | HON002 | js   | // For now, we just return mock data
+miss | HON002 | js   | // Validate the payload before saving
+miss | HON002 | js   | // todo list component
+
+hit  | HON003 | js   | expect(true).toBe(true);
+hit  | HON003 | py   |     assert True
+miss | HON003 | js   | expect(result.ok).toBe(true);
+miss | HON003 | py   |     assert response.ok is True
+
+hit  | HON004 | js   | it.skip("handles errors", () => {});
+hit  | HON004 | ts   | describe.only("auth", () => {
+hit  | HON004 | py   | @pytest.mark.skip(reason="flaky")
+miss | HON004 | js   | it("skips empty rows", () => {
+
+hit  | HON005 | ts   | // @ts-ignore
+hit  | HON005 | ts   | const x = data as any;
+hit  | HON005 | py   | value = compute()  # type: ignore
+hit  | HON005 | sh   | git commit --no-verify -m wip
+miss | HON005 | ts   | const x = data as AnyRecord;
+miss | HON005 | ts   | const y = many as string;
+hit  | HON005 | js   | /* eslint-disable */
+miss | HON005 | py   | value = compute()  # type: ignore[no-any-return]
+miss | HON005 | js   | // eslint-disable-next-line no-console
+
+hit  | UX001 | css  | .btn:focus { outline: none; }
+hit  | UX001 | tsx  | <button className="px-4 outline-none">Save</button>
+miss | UX001 | tsx  | <button className="outline-none focus-visible:ring-2">Save</button>
+miss | UX001 | tsx  | <input className="focus:outline-none focus-visible:ring-2" />
+miss | UX001 | css  | .btn { outline: 2px solid var(--focus); }
+miss | UX001 | tsx  | const item = "text-sm outline-none focus:bg-accent focus:text-accent-foreground";
+
+hit  | UX002 | css  | body { overflow-x: hidden; }
+miss | UX002 | css  | body { overflow-x: clip; }
+
+hit  | UX003 | html | <img src="/hero.png">
+hit  | UX003 | jsx  | <img src={logo} className="h-8" />
+miss | UX003 | html | <img src="/hero.png" alt="Dashboard showing weekly revenue">
+miss | UX003 | jsx  | <img {...props} />
+miss | UX003 | html | <img src="/divider.png" alt="">
+
+hit  | UX004 | jsx  | <div className="card" onClick={open}>
+miss | UX004 | jsx  | <div role="button" tabIndex={0} onClick={open} onKeyDown={onKey}>
+miss | UX004 | jsx  | <button onClick={open}>Open</button>
+
+hit  | UX005 | html | <a href="#">Learn more</a>
+miss | UX005 | html | <a href="#pricing">Pricing</a>
+
+hit  | UX006 | html | <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+miss | UX006 | html | <meta name="viewport" content="width=device-width, initial-scale=1">
+
+hit  | UX007 | html | <input tabindex="3">
+miss | UX007 | html | <div tabindex="0"></div>
+miss | UX007 | html | <div tabindex="-1"></div>
+
+hit  | UX008 | css  | .card { transition: all 0.3s ease; }
+hit  | UX008 | tsx  | <div className="transition-all duration-300">
+miss | UX008 | css  | .card { transition: transform 150ms var(--ease-out); }
+
+hit  | UX009 | css  | .legal { font-size: 10px; }
+miss | UX009 | css  | .legal { font-size: 14px; }
+miss | UX009 | css  | .hero { font-size: 100px; }
+
+hit  | SLOP001 | tsx | <div className="bg-gradient-to-r from-purple-500 to-blue-500">
+hit  | SLOP001 | css | .hero { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+miss | SLOP001 | tsx | <div className="bg-gradient-to-r from-amber-200 to-orange-400">
+
+hit  | SLOP002 | tsx | <div className="rounded-2xl bg-white p-6 shadow-lg">
+miss | SLOP002 | tsx | <div className="rounded-md border p-4">
+
+hit  | SLOP003 | css | .grid { grid-template-columns: repeat(3, 1fr); }
+miss | SLOP003 | css | .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+hit  | SLOP004 | tsx | <h1 className="bg-gradient-to-r bg-clip-text text-transparent">
+miss | SLOP004 | tsx | <h1 className="text-4xl font-semibold">
+
+hit  | SLOP005 | css | body { font-family: Inter, sans-serif; }
+miss | SLOP005 | css | body { font-family: "Source Serif 4", Georgia, serif; }
+miss | SLOP005 | css | body { font-family: Interstate, sans-serif; }
+
+hit  | COPY001 | html | <p>Lorem ipsum dolor sit amet</p>
+miss | COPY001 | html | <p>Export a 12-month CSV of every invoice.</p>
+
+hit  | COPY002 | tsx | <img src="https://via.placeholder.com/150" alt="Team member" />
+hit  | COPY002 | tsx | const quote = { name: "John Doe", role: "CEO" };
+miss | COPY002 | tsx | const quote = { name: "Priya Raman", role: "Design lead" };
+
+hit  | COPY003 | md  | Supercharge your workflow with our all-in-one platform.
+hit  | COPY003 | html | <h1>Unlock the power of your data</h1>
+miss | COPY003 | md  | Exports every invoice as a CSV file.
+
+hit  | COPY004 | html | <p>Trusted by 50,000+ teams worldwide</p>
+hit  | COPY004 | md  | Builds run 47% faster.
+miss | COPY004 | md  | The audit scans 41 files.
+
+hit  | COPY005 | md  | Fast, simple — and free.
+miss | COPY005 | md  | Fast, simple, and free.
+miss | COPY005 | js  | // parse a — b ranges
+
+hit  | COPY006 | md  | - 🚀 Fast setup
+hit  | COPY006 | html | <li>✅ Free forever</li>
+miss | COPY006 | md  | - Fast setup
+
+hit  | SEC011 | js  | const token = jwt.sign({ id: user.id }, "s3cr3t-signing-key", { expiresIn: "1h" });
+hit  | SEC011 | py  | payload = jwt.decode(raw, 'hunter2hunter2', algorithms=["HS256"])
+miss | SEC011 | js  | const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET);
+miss | SEC011 | js  | const token = jwt.sign({ id: 1 }, "test-secret");
+miss | SEC011 | js  | jwt.verify(token, key, { algorithms: ['HS256'] });
+
+hit  | SEC104 | js  | const out = spawn("git", ["log", req.query.branch]);
+hit  | SEC104 | js  | execFile(req.body.tool, args, done);
+miss | SEC104 | js  | const out = spawn("git", ["log", branch]);
+
+hit  | SEC110 | js  | const data = fs.readFileSync(path.join(uploads, req.params.name));
+hit  | SEC110 | py  | return send_file(request.args.get("path"))
+hit  | SEC110 | py  | with open(os.path.join(BASE, request.args["f"])) as fh:
+miss | SEC110 | js  | res.sendFile(req.params.name, { root: uploadsDir });
+miss | SEC110 | py  | with open(os.path.join(BASE, secure_filename(request.args["f"]))) as fh:
+miss | SEC110 | js  | const data = fs.readFileSync(configPath);
+
+hit  | SEC111 | js  | const page = await fetch(req.query.url);
+hit  | SEC111 | py  | resp = requests.get(request.args["url"], timeout=5)
+miss | SEC111 | js  | const page = await fetch(API_BASE + "/status");
+
+hit  | SEC112 | js  | res.redirect(req.query.next);
+hit  | SEC112 | py  | return redirect(request.args.get("next"))
+miss | SEC112 | js  | res.redirect("/dashboard");
+
+hit  | SEC113 | js  | await User.findByIdAndUpdate(req.params.id, req.body);
+hit  | SEC113 | ts  | const user = await prisma.user.create({ data: req.body });
+hit  | SEC113 | py  | user = User(**request.json)
+miss | SEC113 | js  | await User.findByIdAndUpdate(req.params.id, { name: req.body.name });
+
+hit  | SEC114 | js  | res.send(`<h1>Results for ${req.query.q}</h1>`);
+hit  | SEC114 | js  | res.send("<p>Hello " + req.query.name);
+hit  | SEC114 | py  | return render_template_string("<h1>" + request.args["name"] + "</h1>")
+hit  | SEC114 | py  | return f"<h1>Hello {request.args.get('name')}</h1>"
+miss | SEC114 | js  | res.send(escapeHtml(req.query.q));
+miss | SEC114 | py  | return render_template("hello.html", name=name)
+
+hit  | SEC116 | ts  | const rows = await prisma.$queryRawUnsafe(sql);
+hit  | SEC116 | js  | const rows = await knex.raw(`select * from t where id = ${id}`);
+miss | SEC116 | ts  | const rows = await prisma.$queryRaw`select * from t where id = ${id}`;
+
+hit  | SEC218 | js  | const re = new RegExp(req.query.q, "i");
+miss | SEC218 | js  | const re = new RegExp(escapeRegExp(term), "i");
+
+hit  | SEC208 | js  | res.cookie("sid", sid, { httpOnly: false });
+hit  | SEC208 | py  | SESSION_COOKIE_SECURE = False
+miss | SEC208 | js  | res.cookie("sid", sid, { httpOnly: true, secure: true, sameSite: "lax" });
+miss | SEC208 | js  | const transport = nodemailer.createTransport({ port: 587, secure: false });
+
+hit  | SEC209 | py  | @csrf_exempt
+hit  | SEC209 | java | http.csrf().disable();
+miss | SEC209 | py  | @login_required
+
+hit  | SEC210 | rules | allow read, write: if true;
+hit  | SEC210 | json | ".read": true,
+miss | SEC210 | rules | allow read, write: if request.auth != null && request.auth.uid == userId;
+miss | SEC210 | json | ".read": "auth != null",
+
+hit  | SEC211 | sql | create policy "all" on notes for select using (true);
+hit  | SEC211 | sql | ALTER TABLE notes DISABLE ROW LEVEL SECURITY;
+miss | SEC211 | sql | create policy "own" on notes for select using (auth.uid() = owner_id);
+
+hit  | SEC212 | js  | console.log("login attempt", req.body);
+hit  | SEC212 | py  | print("signing in", password)
+hit  | SEC212 | js  | logger.info(JSON.stringify(req.headers));
+miss | SEC212 | js  | console.log("login attempt for user", user.id);
+miss | SEC212 | js  | console.error("Invalid token");
+
+hit  | SEC213 | js  | if (signature === expected) return next();
+hit  | SEC213 | py  | if computed != request_signature:
+miss | SEC213 | js  | if (crypto.timingSafeEqual(a, signatureBuf)) return next();
+miss | SEC213 | js  | if (signature === undefined) return res.status(400).end();
+
+hit  | SEC214 | sh  | chmod -R 777 /var/www
+hit  | SEC214 | dockerfile | RUN chmod 777 /app/data
+miss | SEC214 | sh  | chmod 750 /var/www
+
+hit  | SEC215 | tf  | cidr_blocks = ["0.0.0.0/0"]
+hit  | SEC215 | tf  | acl = "public-read"
+miss | SEC215 | tf  | cidr_blocks = ["10.0.0.0/16"]
+
+hit  | SEC216 | js  | const res = await fetch("http://api.pondlog.io/v1/items");
+miss | SEC216 | js  | const res = await fetch("http://localhost:3000/v1/items");
+miss | SEC216 | js  | const res = await fetch("https://api.pondlog.io/v1/items");
+
+hit  | SEC217 | js  | const url = `${base}/items?api_key=${key}`;
+hit  | SEC217 | py  | url = f"{base}/items?password={pw}"
+miss | SEC217 | js  | const url = `${base}/items?page=${page}`;
+
+hit  | AI001 | js  | messages: [{ role: "system", content: `You are a helper. ${userInput}` }],
+hit  | AI001 | py  | system_prompt = f"You answer questions about {user_query}"
+miss | AI001 | js  | messages: [{ role: "system", content: SYSTEM }, { role: "user", content: text }],
+miss | AI001 | py  | system_prompt = f"Today is {today}."
+
+hit  | COR005 | ts  | const res = await fetch("http://localhost:4000/api/users");
+miss | COR005 | ts  | const base = process.env.API_URL || "http://localhost:4000";
+miss | COR005 | ts  | const res = await fetch(`${base}/api/users`);
+
+hit  | COR006 | js  | try { await save(); } catch (e) { console.log(e); }
+hit  | COR006 | js  | load().catch(console.error);
+hit  | COR006 | js  | load().catch((err) => console.error(err));
+miss | COR006 | js  | load().catch((err) => { report(err); throw err; });
+
+hit  | COR007 | tsx | {items.map((item, index) => <Row key={index} item={item} />)}
+miss | COR007 | tsx | {items.map((item) => <Row key={item.id} item={item} />)}
+
+hit  | COR008 | tsx | useEffect(async () => {
+miss | COR008 | tsx | useEffect(() => {
+
+hit  | HON006 | js  | const limit = 50; // Changed from 100 to 50
+hit  | HON006 | py  | # Added: retry logic
+hit  | HON006 | js  | validate(input); // <-- add this line
+miss | HON006 | js  | const limit = 50; // the API rejects pages over 50
+miss | HON006 | py  | # Retries cover the gateway's cold start.
+
+hit  | UX010 | html | <html>
+hit  | UX010 | tsx | <html className="h-full">
+miss | UX010 | html | <html lang="en">
+miss | UX010 | tsx | <html lang={locale}>
+
+hit  | UX011 | tsx | <button type="button"><X /></button>
+hit  | UX011 | html | <a href="/cart"><svg viewBox="0 0 24 24"><path d="M1 1"/></svg></a>
+hit  | UX011 | html | <button class="menu"><i class="fa fa-bars"></i></button>
+miss | UX011 | tsx | <button type="button" aria-label="Close dialog"><X /></button>
+miss | UX011 | html | <button class="menu"><i class="fa fa-bars"></i> Menu</button>
+miss | UX011 | html | <a href="/docs"><i>Field notes</i></a>
+
+hit  | UX012 | html | <input type="email" name="email" placeholder="Email address">
+hit  | UX012 | tsx | <textarea placeholder="Your message" rows={4} />
+miss | UX012 | html | <input type="email" id="email" name="email" placeholder="you@company.com">
+miss | UX012 | html | <input type="search" aria-label="Search orders" placeholder="Order number">
+miss | UX012 | html | <label>Email <input type="email" placeholder="you@company.com"></label>
+
+hit  | UX013 | html | <video src="intro.mp4" autoplay loop></video>
+miss | UX013 | html | <video src="intro.mp4" autoplay muted loop playsinline></video>
+
+hit  | UX014 | tsx | <input type="password" onPaste={(e) => e.preventDefault()} />
+hit  | UX014 | html | <input type="password" onpaste="return false">
+miss | UX014 | tsx | <input type="password" onPaste={handlePaste} />
+
+hit  | UX015 | html | <input type="password" name="pw" autocomplete="off">
+hit  | UX015 | tsx | <input autoComplete="off" type="email" name="email" />
+miss | UX015 | html | <input type="password" name="pw" autocomplete="current-password">
+
+hit  | UX016 | css | .modal { z-index: 99999; }
+hit  | UX016 | tsx | <div className="fixed z-[9999]">
+miss | UX016 | css | .modal { z-index: 40; }
+
+hit  | UX017 | css | .hero { height: 100vh; }
+hit  | UX017 | tsx | <main className="flex h-screen flex-col">
+miss | UX017 | css | .hero { min-height: 100dvh; }
+miss | UX017 | tsx | <main className="flex min-h-screen flex-col">
+miss | UX017 | css | .row { line-height: 100vh; }
+
+hit  | UX018 | css | p { text-align: justify; }
+hit  | UX018 | tsx | <p className="text-justify leading-7">
+miss | UX018 | css | p { text-align: start; }
+
+hit  | UX019 | html | <a href="/pricing">Click here</a>
+hit  | UX019 | html | See the guide <a href="/guide">here</a>.
+miss | UX019 | html | <a href="/pricing">Compare plans</a>
+
+hit  | UX020 | js  | alert("Saved!");
+hit  | UX020 | ts  | if (!window.confirm("Delete?")) return;
+hit  | UX020 | js  | if (confirm("Delete this invoice?")) remove(id);
+miss | UX020 | js  | toast.alert("Saved");
+miss | UX020 | js  | const ok = await dialog.confirm({ title: "Delete invoice 1042?" });
+
+hit  | SLOP006 | tsx | <div className="backdrop-blur-md bg-white/10 border">
+miss | SLOP006 | tsx | <div className="bg-white border">
+
+hit  | SLOP007 | tsx | <div className="transition hover:scale-105">
+hit  | SLOP007 | tsx | <a className="hover:-translate-y-1 hover:shadow-xl">
+miss | SLOP007 | tsx | <a className="hover:bg-surface-raised">
+
+hit  | SLOP008 | tsx | <span className="animate-bounce">New</span>
+miss | SLOP008 | tsx | <span className="motion-safe:animate-bounce">New</span>
+miss | SLOP008 | tsx | <span className="animate-spin" role="status" />
+
+hit  | COPY007 | md  | Certainly! Here is the revised README for your project.
+hit  | COPY007 | js  | // Here's the updated code with error handling
+hit  | COPY007 | html | <p>As an AI language model, I cannot browse the web.</p>
+miss | COPY007 | md  | Here is how the export works.
+miss | COPY007 | md  | Make sure the service is running first.
+
+hit  | COPY008 | md  | Let's delve into the rich tapestry of modern tooling.
+hit  | COPY008 | html | <p>It's important to note that exports run nightly.</p>
+miss | COPY008 | md  | Exports run nightly at 02:00 UTC.
+
+hit  | COPY009 | tsx | <p>Something went wrong. Please try again.</p>
+hit  | COPY009 | js  | setError("Oops! Something went wrong");
+miss | COPY009 | tsx | <p>We could not save the invoice because the connection dropped. Your draft is kept.</p>
+
+hit  | SEC114 | js  | res.send("requested " + req.params.sub);
+miss | UX020 | js  | res.redirect("/?next=<script>alert(1)</script>");
+miss | COPY009 | js  | throw new Error("oops!");
+hit  | COPY009 | html | <h1>Oops!</h1>
+hit  | HON006 | js  | const rows = page(items); // now uses the cursor API
+miss | HON006 | py  | # now check that the relevant values come back
+
+hit  | SEC219 | js  | res.status(500).json({ error: err.message, stack: err.stack });
+hit  | SEC219 | py  | return jsonify(error=traceback.format_exc()), 500
+miss | SEC219 | js  | logger.error(err.stack); res.status(500).json({ error: "internal", id });
+miss | SEC219 | js  | res.json({ items: view.stackOrder });
+
+hit  | COPY008 | md  | It's not just a dashboard, it's a command center.
+hit  | COPY008 | html | <p>Whether you're a founder or a developer, Pondlog fits.</p>
+hit  | COPY008 | md  | Unlock the full power of your logs.
+miss | COPY008 | md  | The power of two is computed with a shift.
+
+hit  | UX021 | css | .panel { transition: height 0.3s ease; }
+hit  | UX021 | css | .nav { transition: opacity 0.2s, left 0.2s; }
+hit  | UX021 | tsx | <div className="transition-[width] duration-300">
+miss | UX021 | css | .panel { transition: transform 240ms var(--ease-out), opacity 240ms var(--ease-out); }
+miss | UX021 | css | .panel { transition: line-height 0.2s; }

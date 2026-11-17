@@ -1,116 +1,95 @@
 <#
-  install.ps1 - Install the FixMyVibe skill into Claude Code, Codex, and Antigravity,
-  and register a /fixmyvibe slash command in each.  (ASCII-only on purpose: PS 5.1 reads .ps1 as ANSI.)
+  install.ps1 - Install the FixMyVibe skill for the agents on this machine.
+  ASCII-only on purpose: Windows PowerShell 5.1 reads .ps1 files in the system code page.
+
+  Three locations cover every supported agent:
+    claude       ~/.claude/skills/fixmyvibe          Claude Code (Cursor reads it too)
+    agents       ~/.agents/skills/fixmyvibe          Codex, Cursor, Gemini CLI
+    antigravity  ~/.gemini/config/skills/fixmyvibe   Antigravity
 
   Usage:
-    ./install.ps1                 # auto: install into every agent detected on this machine
-    ./install.ps1 -All            # install into all three even if not yet detected (creates dirs)
-    ./install.ps1 -Claude -Codex  # install into the named agent(s) only
-    ./install.ps1 -HomeDir D:\tmp\home   # override HOME (for testing)
+    ./install.ps1                    install into every location whose agent is detected
+    ./install.ps1 -All               install into all three, creating folders
+    ./install.ps1 -Claude -Agents    install into the named locations only
+    ./install.ps1 -RemoveLegacy      also remove what older FixMyVibe installers left behind
+    ./install.ps1 -HomeDir D:\tmp\h  use another home folder (for testing)
 
-  Re-runnable / idempotent: copies overwrite, the command file is rewritten, and the AGENTS.md
-  block is inserted only once (guarded by a marker).
+  Re-runnable: each run replaces the installed copy with this one.
 #>
 [CmdletBinding()]
 param(
   [switch]$Claude,
-  [switch]$Codex,
+  [Alias('Codex', 'Cursor', 'Gemini')][switch]$Agents,
   [switch]$Antigravity,
   [switch]$All,
+  [switch]$RemoveLegacy,
   [string]$HomeDir = $HOME
 )
 
 $ErrorActionPreference = 'Stop'
-$SkillName = 'fixmyvibe'
-$Src = $PSScriptRoot                          # this skill folder (source of truth)
-if (-not (Test-Path (Join-Path $Src 'SKILL.md'))) { throw "SKILL.md not found next to installer ($Src)." }
+$Src = $PSScriptRoot
+if (-not (Test-Path -LiteralPath (Join-Path $Src 'SKILL.md'))) { throw "SKILL.md not found next to the installer ($Src)." }
 
-$cmdTemplate = Get-Content (Join-Path $Src 'command.md') -Raw
-$marker = '<!-- fixmyvibe:managed -->'
+function Install-Skill([string]$Dest) {
+  if (Test-Path -LiteralPath $Dest) {
+    # Replace only a folder that is a FixMyVibe install, so a stale file from an older version cannot linger.
+    $old = Join-Path $Dest 'SKILL.md'
+    if (-not (Test-Path -LiteralPath $old) -or -not (Select-String -LiteralPath $old -Pattern '^name:\s*fixmyvibe\s*$' -Quiet)) {
+      throw "$Dest exists and is not a FixMyVibe install. Move it away and run again."
+    }
+    Remove-Item -LiteralPath $Dest -Recurse -Force
+  }
+  New-Item -ItemType Directory -Force -Path $Dest | Out-Null
+  Copy-Item -Path (Join-Path $Src '*') -Destination $Dest -Recurse -Force
+}
+
+$targets = @(
+  @{ Name = 'claude'; On = $Claude; Dir = '.claude/skills/fixmyvibe'; Detect = @('.claude'); Use = '/fixmyvibe in Claude Code' },
+  @{ Name = 'agents'; On = $Agents; Dir = '.agents/skills/fixmyvibe'; Detect = @('.codex', '.cursor', '.agents', '.gemini'); Use = '$fixmyvibe in Codex, /fixmyvibe in Cursor and Gemini CLI' },
+  @{ Name = 'antigravity'; On = $Antigravity; Dir = '.gemini/config/skills/fixmyvibe'; Detect = @('.gemini/config', '.gemini/antigravity'); Use = '/fixmyvibe in Antigravity' }
+)
+$explicit = $Claude -or $Agents -or $Antigravity
 $installed = @()
 
-function Copy-Skill($dest) {
-  New-Item -ItemType Directory -Force -Path $dest | Out-Null
-  # Copy contents of $Src into $dest (overwrite). Exclude VCS noise.
-  Copy-Item -Path (Join-Path $Src '*') -Destination $dest -Recurse -Force -Exclude @('.git')
+Write-Host "== FixMyVibe installer ==  (home: $HomeDir)"
+foreach ($t in $targets) {
+  $detected = $false
+  foreach ($d in $t.Detect) { if (Test-Path -LiteralPath (Join-Path $HomeDir $d)) { $detected = $true } }
+  $go = $All -or $t.On -or (-not $explicit -and $detected)
+  if (-not $go) { Write-Host ("skip      {0,-12} (not detected)" -f $t.Name); continue }
+  $dest = Join-Path $HomeDir $t.Dir
+  Install-Skill $dest
+  Write-Host ("installed {0,-12} {1}" -f $t.Name, $dest) -ForegroundColor Green
+  $installed += $t.Use
 }
 
-function Write-Command($destFile, $skillDir) {
-  New-Item -ItemType Directory -Force -Path (Split-Path $destFile) | Out-Null
-  ($cmdTemplate -replace '\{\{SKILL_DIR\}\}', ($skillDir -replace '\\','/')) |
-    Set-Content -Path $destFile -Encoding utf8
-}
-
-function Add-AgentsBlock($agentsFile, $skillDir) {
-  $block = @"
-$marker
-## FixMyVibe craft standard (auto-installed)
-Before writing/generating/refactoring code or building any UI, follow the FixMyVibe skill at
-$skillDir/SKILL.md: read-before-write, refuse the average, and pass references/FINISH-GATE.md
-(run bin/fixmyvibe-audit) before claiming done. Never emit anything in references/FORBIDDEN-PATTERNS.md.
-Invoke explicitly with /$SkillName.
-<!-- /fixmyvibe:managed -->
-"@
-  New-Item -ItemType Directory -Force -Path (Split-Path $agentsFile) | Out-Null
-  $existing = if (Test-Path $agentsFile) { Get-Content $agentsFile -Raw } else { '' }
-  if ($existing -notmatch [regex]::Escape($marker)) {
-    ($existing.TrimEnd() + "`r`n`r`n" + $block + "`r`n") | Set-Content -Path $agentsFile -Encoding utf8
-    return $true
+# Older installers wrote to paths the agents no longer read, plus an always-on AGENTS.md block.
+$legacy = @('.codex/skills/fixmyvibe', '.gemini/skills/fixmyvibe', '.antigravity/skills/fixmyvibe',
+            '.claude/commands/fixmyvibe.md', '.codex/prompts/fixmyvibe.md', '.gemini/workflows/fixmyvibe.md', '.antigravity/workflows/fixmyvibe.md') |
+  ForEach-Object { Join-Path $HomeDir $_ } | Where-Object { Test-Path -LiteralPath $_ }
+$blockFiles = @('.codex/AGENTS.md', '.gemini/AGENTS.md') | ForEach-Object { Join-Path $HomeDir $_ } |
+  Where-Object { (Test-Path -LiteralPath $_) -and (Select-String -LiteralPath $_ -SimpleMatch '<!-- fixmyvibe:managed -->' -Quiet) }
+if ($legacy -or $blockFiles) {
+  if ($RemoveLegacy) {
+    foreach ($p in $legacy) { Remove-Item -LiteralPath $p -Recurse -Force; Write-Host "removed   $p" }
+    $utf8 = New-Object System.Text.UTF8Encoding($false)
+    foreach ($f in $blockFiles) {
+      $text = [System.IO.File]::ReadAllText($f)   # .NET read and write keep the file UTF-8 without a BOM
+      $clean = [regex]::Replace($text, '(?s)\r?\n?<!-- fixmyvibe:managed -->.*?<!-- /fixmyvibe:managed -->\r?\n?', "`n")
+      [System.IO.File]::WriteAllText($f, $clean, $utf8); Write-Host "cleaned   $f (removed the FixMyVibe block)"
+    }
+  } else {
+    Write-Host 'Found files from an older FixMyVibe install that agents no longer read:' -ForegroundColor Yellow
+    foreach ($p in @($legacy) + @($blockFiles)) { Write-Host "  $p" }
+    Write-Host 'Run again with -RemoveLegacy to remove them.' -ForegroundColor Yellow
   }
-  return $false
-}
-
-# Decide which agents to target
-$detected = @{
-  Claude      = Test-Path (Join-Path $HomeDir '.claude')
-  Codex       = Test-Path (Join-Path $HomeDir '.codex')
-  Antigravity = (Test-Path (Join-Path $HomeDir '.gemini')) -or (Test-Path (Join-Path $HomeDir '.antigravity'))
-}
-$explicit = $Claude -or $Codex -or $Antigravity
-$do = @{
-  Claude      = $All -or $Claude      -or (-not $explicit -and $detected.Claude)
-  Codex       = $All -or $Codex       -or (-not $explicit -and $detected.Codex)
-  Antigravity = $All -or $Antigravity -or (-not $explicit -and $detected.Antigravity)
-}
-
-Write-Host "== FixMyVibe installer ==  (HOME: $HomeDir)"
-Write-Host ("detected -> Claude:{0}  Codex:{1}  Antigravity:{2}" -f $detected.Claude,$detected.Codex,$detected.Antigravity)
-
-# ---- Claude Code ----
-if ($do.Claude) {
-  $skillDir = Join-Path $HomeDir ".claude/skills/$SkillName"
-  Copy-Skill $skillDir
-  Write-Command (Join-Path $HomeDir ".claude/commands/$SkillName.md") $skillDir
-  Write-Host "[Claude] skill -> $skillDir ; command -> /$SkillName" -ForegroundColor Green
-  $installed += 'Claude (/fixmyvibe)'
-}
-
-# ---- Codex CLI ----
-if ($do.Codex) {
-  $skillDir = Join-Path $HomeDir ".codex/skills/$SkillName"
-  Copy-Skill $skillDir
-  Write-Command (Join-Path $HomeDir ".codex/prompts/$SkillName.md") $skillDir   # prompts/<name>.md -> /<name>
-  Add-AgentsBlock (Join-Path $HomeDir ".codex/AGENTS.md") $skillDir | Out-Null
-  Write-Host "[Codex]  skill -> $skillDir ; command -> /$SkillName (prompts) ; AGENTS.md updated" -ForegroundColor Green
-  $installed += 'Codex (/fixmyvibe)'
-}
-
-# ---- Antigravity ----
-if ($do.Antigravity) {
-  $base = if (Test-Path (Join-Path $HomeDir '.antigravity')) { Join-Path $HomeDir '.antigravity' } else { Join-Path $HomeDir '.gemini' }
-  $skillDir = Join-Path $base "skills/$SkillName"
-  Copy-Skill $skillDir
-  Write-Command (Join-Path $base "workflows/$SkillName.md") $skillDir            # global workflow -> /<name>
-  Add-AgentsBlock (Join-Path $HomeDir ".gemini/AGENTS.md") $skillDir | Out-Null
-  Write-Host "[Antigravity] skill -> $skillDir ; workflow -> /$SkillName ; ~/.gemini/AGENTS.md updated" -ForegroundColor Green
-  Write-Host "  note: if /$SkillName does not appear, import $base/workflows/$SkillName.md via Antigravity's '+ Global' workflow button." -ForegroundColor DarkYellow
-  $installed += 'Antigravity (/fixmyvibe)'
 }
 
 Write-Host '----------------------------------------'
 if ($installed.Count -eq 0) {
-  Write-Host 'No agents installed. None detected - re-run with -All or a specific -Claude/-Codex/-Antigravity flag.' -ForegroundColor Yellow
-} else {
-  Write-Host ('Installed into: ' + ($installed -join ', ')) -ForegroundColor Cyan
-  Write-Host 'Open a fresh agent session and type /fixmyvibe to use it.'
+  Write-Host 'Nothing installed. No agent was detected. Run again with -All, or name a location.' -ForegroundColor Yellow
+  exit 1
 }
+Write-Host 'Open a new agent session, then use:'
+foreach ($u in $installed) { Write-Host "  $u" }
+Write-Host 'To make the audit run after every edit and before the agent stops, see adapters/ in the installed folder.'
